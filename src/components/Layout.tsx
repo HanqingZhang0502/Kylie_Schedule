@@ -47,8 +47,17 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
         {children}
       </main>
 
+      {/* ✅ Signature（新增：放在底部导航上方，不挡操作） */}
+      <div className="fixed bottom-[72px] left-0 right-0 z-10 pointer-events-none">
+        <div className="text-center">
+          <span className="font-serif italic tracking-wide text-xs text-gray-600/80">
+            By Hanqing Zhang
+          </span>
+        </div>
+      </div>
+
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg pb-safe">
+      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg pb-safe z-20">
         <div className="flex justify-around items-center h-16">
           <button
             onClick={() => onTabChange('dashboard')}
