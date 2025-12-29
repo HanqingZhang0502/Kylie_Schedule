@@ -1,101 +1,122 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { Student, ClassSession, AppData } from '../types';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import type { Student, ClassSession } from '../types';
+import { db, auth } from '../firebase';
+import {
+  collection,
+  addDoc,
+  deleteDoc,
+  doc,
+  onSnapshot,
+  serverTimestamp
+} from 'firebase/firestore';
+import type { User } from 'firebase/auth';
 
 interface StudentContextType {
-    students: Student[];
-    sessions: ClassSession[];
-    addStudent: (name: string, note?: string) => void;
-    deleteStudent: (id: string) => void;
-    addClassSession: (studentId: string, date: string, duration: number, note?: string) => void;
-    deleteClassSession: (id: string) => void;
-    getStudentSessions: (studentId: string) => ClassSession[];
+  students: Student[];
+  sessions: ClassSession[];
+  addStudent: (name: string, note?: string) => Promise<void>;
+  deleteStudent: (id: string) => Promise<void>;
+  addClassSession: (studentId: string, date: string, duration: number, note?: string) => Promise<void>;
+  deleteClassSession: (id: string) => Promise<void>;
+  getStudentSessions: (studentId: string) => ClassSession[];
 }
 
 const StudentContext = createContext<StudentContextType | undefined>(undefined);
 
-const STORAGE_KEY = 'kylie_schedule_data';
-
 export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [students, setStudents] = useState<Student[]>([]);
-    const [sessions, setSessions] = useState<ClassSession[]>([]);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [sessions, setSessions] = useState<ClassSession[]>([]);
+  const [user, setUser] = useState<User | null>(() => auth.currentUser);
 
-    // Load data from local storage on mount
-    useEffect(() => {
-        const storedData = localStorage.getItem(STORAGE_KEY);
-        if (storedData) {
-            try {
-                const parsed: AppData = JSON.parse(storedData);
-                setStudents(parsed.students || []);
-                setSessions(parsed.sessions || []);
-            } catch (e) {
-                console.error("Failed to parse stored data", e);
-            }
-        }
-    }, []);
+  useEffect(() => {
+    const unsubAuth = auth.onAuthStateChanged(u => setUser(u));
 
-    // Save data to local storage whenever it changes
-    useEffect(() => {
-        const data: AppData = { students, sessions };
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    }, [students, sessions]);
+    if (!user) {
+      setStudents([]);
+      setSessions([]);
+      return () => unsubAuth();
+    }
 
-    const addStudent = (name: string, note?: string) => {
-        const newStudent: Student = {
-            id: crypto.randomUUID(),
-            name,
-            note,
-            createdAt: new Date().toISOString(),
-        };
-        setStudents(prev => [...prev, newStudent]);
+    // users/{uid}/students
+    const studentsRef = collection(db, "users", user.uid, "students");
+    const unsubStudents = onSnapshot(studentsRef, (snapshot) => {
+      const loadedStudents = snapshot.docs.map(d => ({
+        id: d.id,
+        ...(d.data() as Omit<Student, "id">),
+      })) as Student[];
+      setStudents(loadedStudents);
+    });
+
+    // users/{uid}/sessions
+    const sessionsRef = collection(db, "users", user.uid, "sessions");
+    const unsubSessions = onSnapshot(sessionsRef, (snapshot) => {
+      const loadedSessions = snapshot.docs.map(d => ({
+        id: d.id,
+        ...(d.data() as Omit<ClassSession, "id">),
+      })) as ClassSession[];
+      setSessions(loadedSessions);
+    });
+
+    return () => {
+      unsubStudents();
+      unsubSessions();
+      unsubAuth();
     };
+  }, [user]);
 
-    const deleteStudent = (id: string) => {
-        setStudents(prev => prev.filter(s => s.id !== id));
-        // Also delete associated sessions? Maybe keep them for history?
-        // For now, let's keep them but they will be orphaned. 
-        // Or we can cascade delete. Let's cascade delete for cleanliness.
-        setSessions(prev => prev.filter(s => s.studentId !== id));
-    };
+  const addStudent = async (name: string, note?: string) => {
+    if (!user) return;
+    await addDoc(collection(db, "users", user.uid, "students"), {
+      name,
+      note,
+      createdAt: serverTimestamp(),
+    });
+  };
 
-    const addClassSession = (studentId: string, date: string, duration: number, note?: string) => {
-        const newSession: ClassSession = {
-            id: crypto.randomUUID(),
-            studentId,
-            date,
-            duration,
-            note,
-            createdAt: new Date().toISOString(),
-        };
-        setSessions(prev => [...prev, newSession]);
-    };
+  const deleteStudent = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "users", user.uid, "students", id));
+  };
 
-    const deleteClassSession = (id: string) => {
-        setSessions(prev => prev.filter(s => s.id !== id));
-    };
+  const addClassSession = async (studentId: string, date: string, duration: number, note?: string) => {
+    if (!user) return;
+    await addDoc(collection(db, "users", user.uid, "sessions"), {
+      studentId,
+      date,
+      duration,
+      note,
+      createdAt: serverTimestamp(),
+    });
+  };
 
-    const getStudentSessions = (studentId: string) => {
-        return sessions.filter(s => s.studentId === studentId);
-    };
+  const deleteClassSession = async (id: string) => {
+    if (!user) return;
+    await deleteDoc(doc(db, "users", user.uid, "sessions", id));
+  };
 
-    return (
-        <StudentContext.Provider value={{
-            students,
-            sessions,
-            addStudent,
-            deleteStudent,
-            addClassSession,
-            deleteClassSession,
-            getStudentSessions
-        }}>
-            {children}
-        </StudentContext.Provider>
-    );
+  const getStudentSessions = (studentId: string) => {
+    return sessions.filter(s => s.studentId === studentId);
+  };
+
+  return (
+    <StudentContext.Provider value={{
+      students,
+      sessions,
+      addStudent,
+      deleteStudent,
+      addClassSession,
+      deleteClassSession,
+      getStudentSessions
+    }}>
+      {children}
+    </StudentContext.Provider>
+  );
 };
 
 export const useStudentData = () => {
-    const context = useContext(StudentContext);
-    if (context === undefined) {
-        throw new Error('useStudentData must be used within a StudentProvider');
-    }
-    return context;
+  const context = useContext(StudentContext);
+  if (context === undefined) {
+    throw new Error('useStudentData must be used within a StudentProvider');
+  }
+  return context;
 };
