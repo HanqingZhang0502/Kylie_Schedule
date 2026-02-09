@@ -17,10 +17,15 @@ interface StudentContextType {
   sessions: ClassSession[];
   addStudent: (name: string, note?: string) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
-  addClassSession: (studentId: string, date: string, duration: number, note?: string) => Promise<void>;
+
+  // ✅ CHANGED: add folder (History 1/2/3...) as first param
+  addClassSession: (folder: string, studentId: string, date: string, duration: number, note?: string) => Promise<void>;
+
   deleteClassSession: (id: string) => Promise<void>;
-  // ✅ NEW: update session (for Edit)
+
+  // ✅ update session (for Edit)
   updateClassSession: (id: string, updates: Partial<Omit<ClassSession, 'id'>>) => Promise<void>;
+
   getStudentSessions: (studentId: string) => ClassSession[];
 }
 
@@ -81,11 +86,14 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'students', id));
   };
 
-  const addClassSession = async (studentId: string, date: string, duration: number, note?: string) => {
+  // ✅ CHANGED: add folder + write to Firestore
+  // folder: "1" = kids/teaching, "2" = her own training, etc.
+  const addClassSession = async (folder: string, studentId: string, date: string, duration: number, note?: string) => {
     if (!user) return;
     await addDoc(collection(db, 'users', user.uid, 'sessions'), {
+      folder: folder || '1', // ✅ default to "1" for old behavior
       studentId,
-      date,      // ✅ keep as "YYYY-MM-DD" string
+      date,      // keep as "YYYY-MM-DD" string
       duration,
       note,
       createdAt: serverTimestamp(),
@@ -97,17 +105,13 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
   };
 
-  // ✅ NEW: update existing class session (Edit Save)
   const updateClassSession = async (id: string, updates: Partial<Omit<ClassSession, 'id'>>) => {
     if (!user) return;
 
-    // ✅ Keep date as "YYYY-MM-DD" string to avoid timezone +1 day issues
     await updateDoc(doc(db, 'users', user.uid, 'sessions', id), {
       ...updates,
       updatedAt: serverTimestamp(),
     });
-
-    // No need to setSessions manually: onSnapshot will auto-refresh
   };
 
   const getStudentSessions = (studentId: string) => {
@@ -122,7 +126,7 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       deleteStudent,
       addClassSession,
       deleteClassSession,
-      updateClassSession, // ✅ expose it
+      updateClassSession,
       getStudentSessions
     }}>
       {children}

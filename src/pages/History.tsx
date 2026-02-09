@@ -4,6 +4,12 @@ import { Trash2, Pencil } from 'lucide-react';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
+// ✅ folder 显示名（只影响 UI，不影响数据）
+const FOLDER_LABELS: Record<string, string> = {
+  "1": "授课记录",
+  "2": "学习记录",
+};
+
 // ✅ 显示：周几 + YYYY-MM-DD（稳定，不走 UTC）
 const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
@@ -13,7 +19,6 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   const mo = Number(m[2]);
   const d = Number(m[3]);
 
-  // 用本地时区构造日期，避免 UTC 偏移
   const dt = new Date(y, mo - 1, d);
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(dt); // Mon
   return `${weekday} ${ymd}`;
@@ -21,6 +26,9 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
 
 const History: React.FC = () => {
   const { sessions, students, deleteClassSession, updateClassSession } = useStudentData();
+
+  // ✅ NEW: 记录类型筛选（默认 1：授课记录）
+  const [selectedFolder, setSelectedFolder] = useState<string>('1');
 
   const [selectedStudentId, setSelectedStudentId] = useState<string>('ALL');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
@@ -34,43 +42,55 @@ const History: React.FC = () => {
     date: string;       // "YYYY-MM-DD"
     duration: string;   // string for controlled input
     note: string;
+    folder: string;     // ✅ keep folder so Edit won't lose it
   }>({
     studentId: '',
     date: '',
     duration: '',
     note: '',
+    folder: '1',
   });
 
   const getStudentName = (id: string) =>
     students.find(s => s.id === id)?.name || 'Unknown Student';
 
-  /* ✅ 从 sessions 里自动生成可选月份 */
+  // ✅ 先按 folder 分组（旧数据没 folder 的默认算 1）
+  const folderSessions = useMemo(() => {
+    return sessions.filter(s => (s.folder ?? '1') === selectedFolder);
+  }, [sessions, selectedFolder]);
+
+  /* ✅ 从“当前 folderSessions”里自动生成可选月份 */
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
-    sessions.forEach(s => {
+    folderSessions.forEach(s => {
       if (s.date && s.date.length >= 7) {
         set.add(s.date.slice(0, 7)); // YYYY-MM
       }
     });
-    // 最新月份排在最前
     return Array.from(set).sort((a, b) => (a < b ? 1 : -1));
-  }, [sessions]);
+  }, [folderSessions]);
 
-  /* ✅ 默认选最新月份 */
+  /* ✅ 默认选最新月份（当 folder 切换时也会重新设定） */
   useEffect(() => {
-    if (!selectedMonth && availableMonths.length > 0) {
+    if (availableMonths.length === 0) {
+      setSelectedMonth('');
+      return;
+    }
+    // 如果当前 selectedMonth 不在可选范围，或者为空，则选最新
+    if (!selectedMonth || !availableMonths.includes(selectedMonth)) {
       setSelectedMonth(availableMonths[0]);
     }
   }, [availableMonths, selectedMonth]);
 
-  /* ✅ 根据学生 + 月份筛选 */
+  /* ✅ 根据 folder + 学生 + 月份筛选 */
   const filteredSessions = useMemo(() => {
-    return sessions
+    if (!selectedMonth) return [];
+
+    return folderSessions
       .filter(s => monthKey(s.date) === selectedMonth)
       .filter(s => (selectedStudentId === 'ALL' ? true : s.studentId === selectedStudentId))
-      // ✅ 用字符串排序最稳：YYYY-MM-DD 天然可比较
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [sessions, selectedMonth, selectedStudentId]);
+      .sort((a, b) => b.date.localeCompare(a.date)); // YYYY-MM-DD 字符串排序最稳
+  }, [folderSessions, selectedMonth, selectedStudentId]);
 
   /* ✅ 当前筛选条件下的总课时 */
   const totalHours = useMemo(() => {
@@ -82,9 +102,10 @@ const History: React.FC = () => {
     setEditingSessionId(session.id);
     setEditForm({
       studentId: session.studentId,
-      date: session.date, // keep as "YYYY-MM-DD"
+      date: session.date,
       duration: String(session.duration ?? ''),
       note: session.note ?? '',
+      folder: session.folder ?? '1', // ✅ keep folder
     });
     setIsEditOpen(true);
   };
@@ -108,12 +129,12 @@ const History: React.FC = () => {
       date: editForm.date,
       duration: dur,
       note: editForm.note?.trim() || '',
+      folder: editForm.folder || '1', // ✅ write back folder so it never gets lost
     });
 
     closeEdit();
   };
 
-  // ✅ 弹窗里实时显示周几（你改日期，周几也会变）
   const editDateLabel = useMemo(() => {
     return editForm.date ? formatWithWeekday(editForm.date, 'en-US') : '';
   }, [editForm.date]);
@@ -122,7 +143,21 @@ const History: React.FC = () => {
     <div className="space-y-4">
       {/* 筛选器 */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+
+          {/* ✅ Folder */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
+            <select
+              value={selectedFolder}
+              onChange={(e) => setSelectedFolder(e.target.value)}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+            >
+              <option value="1">{FOLDER_LABELS["1"]}</option>
+              <option value="2">{FOLDER_LABELS["2"]}</option>
+            </select>
+          </div>
+
           {/* Student */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
@@ -162,14 +197,16 @@ const History: React.FC = () => {
       {/* 总课时 */}
       <div className="bg-rose-600 text-white p-4 rounded-xl shadow-lg shadow-rose-200">
         <p className="text-rose-100 text-sm">
-          Total Hours · {selectedMonth}
+          Total Hours · {selectedMonth || '—'} · {FOLDER_LABELS[selectedFolder]}
           {selectedStudentId === 'ALL' ? '' : ` · ${getStudentName(selectedStudentId)}`}
         </p>
         <p className="text-3xl font-bold">{totalHours} hrs</p>
       </div>
 
       {/* 历史记录 */}
-      <h2 className="text-lg font-bold text-gray-800 mb-2">Class History</h2>
+      <h2 className="text-lg font-bold text-gray-800 mb-2">
+        Class History · {FOLDER_LABELS[selectedFolder]}
+      </h2>
 
       <div className="space-y-3">
         {filteredSessions.length === 0 ? (
@@ -192,7 +229,6 @@ const History: React.FC = () => {
                   </span>
                 </div>
 
-                {/* ✅ 显示周几 + 日期 */}
                 <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
 
                 {session.note && (
@@ -200,7 +236,6 @@ const History: React.FC = () => {
                 )}
               </div>
 
-              {/* Edit + Delete */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => openEdit(session)}
@@ -235,7 +270,6 @@ const History: React.FC = () => {
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
 
-            {/* Student */}
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
             <select
               value={editForm.studentId}
@@ -250,7 +284,6 @@ const History: React.FC = () => {
             {/* Date */}
             <div className="mb-1 flex items-end justify-between">
               <label className="block text-sm font-medium text-gray-700">Date</label>
-              {/* ✅ 弹窗里也显示周几 */}
               {editDateLabel && (
                 <span className="text-xs text-gray-400">{editDateLabel}</span>
               )}

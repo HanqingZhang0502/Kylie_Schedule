@@ -13,6 +13,7 @@ export interface ClassSession {
   date: string; // YYYY-MM-DD
   duration: number;
   note?: string;
+  folder?: string; // ✅ NEW: 1/2/3... 用来区分不同“历史记录分组”
   createdAt?: Timestamp;
 }
 
