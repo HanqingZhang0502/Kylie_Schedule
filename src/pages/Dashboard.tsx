@@ -1,15 +1,39 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useStudentData } from '../context/StudentContext';
+
+// ✅ 获取“洛杉矶今天”的 YYYY-MM-DD，避免晚上变成第二天（UTC bug）
+const getTodayInLA = () => {
+  // en-CA 输出格式就是 YYYY-MM-DD
+  return new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date());
+};
+
+// ✅ 把 YYYY-MM-DD 转成：周几 + 友好日期（用于显示）
+const weekdayLabel = (ymd: string, locale = 'en-US') => {
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return '';
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+
+  // 用本地时区的 00:00 构造日期，稳定不会被 UTC 搞乱
+  const dt = new Date(y, mo - 1, d);
+
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(dt); // Monday
+  const pretty = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(dt); // Feb 9, 2026
+  return `${weekday}, ${pretty}`;
+};
 
 const Dashboard: React.FC = () => {
   const { students, addClassSession } = useStudentData();
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
-  const [classDate, setClassDate] = useState(
-    new Date().toISOString().split('T')[0]
-  );
+  // ✅ 修复：不要用 toISOString()（UTC），改用洛杉矶“本地今天”
+  const [classDate, setClassDate] = useState(getTodayInLA());
   const [duration, setDuration] = useState(1);
   const [note, setNote] = useState('');
+
+  // ✅ 选择日期后，周几会实时跟着变
+  const classDateLabel = useMemo(() => weekdayLabel(classDate, 'en-US'), [classDate]);
 
   const handleQuickLog = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +94,12 @@ const Dashboard: React.FC = () => {
                   onChange={(e) => setClassDate(e.target.value)}
                   className="w-full p-3 bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
                 />
+                {/* ✅ 显示周几（input 本身不能显示周几，所以用提示文本） */}
+                {classDateLabel && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {classDateLabel}
+                  </p>
+                )}
               </div>
 
               {/* Duration */}

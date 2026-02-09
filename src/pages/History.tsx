@@ -4,6 +4,21 @@ import { Trash2, Pencil } from 'lucide-react';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
+// ✅ 显示：周几 + YYYY-MM-DD（稳定，不走 UTC）
+const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
+  const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!m) return ymd;
+
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+
+  // 用本地时区构造日期，避免 UTC 偏移
+  const dt = new Date(y, mo - 1, d);
+  const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(dt); // Mon
+  return `${weekday} ${ymd}`;
+};
+
 const History: React.FC = () => {
   const { sessions, students, deleteClassSession, updateClassSession } = useStudentData();
 
@@ -53,9 +68,8 @@ const History: React.FC = () => {
     return sessions
       .filter(s => monthKey(s.date) === selectedMonth)
       .filter(s => (selectedStudentId === 'ALL' ? true : s.studentId === selectedStudentId))
-      // ⚠️ 如果你 date 是 "YYYY-MM-DD" 字符串，这里 new Date(...) 可能出现时区偏移
-      // 但仅用于排序，问题不大；要绝对稳也可以改成字符串比较。
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      // ✅ 用字符串排序最稳：YYYY-MM-DD 天然可比较
+      .sort((a, b) => b.date.localeCompare(a.date));
   }, [sessions, selectedMonth, selectedStudentId]);
 
   /* ✅ 当前筛选条件下的总课时 */
@@ -99,6 +113,11 @@ const History: React.FC = () => {
     closeEdit();
   };
 
+  // ✅ 弹窗里实时显示周几（你改日期，周几也会变）
+  const editDateLabel = useMemo(() => {
+    return editForm.date ? formatWithWeekday(editForm.date, 'en-US') : '';
+  }, [editForm.date]);
+
   return (
     <div className="space-y-4">
       {/* 筛选器 */}
@@ -119,7 +138,7 @@ const History: React.FC = () => {
             </select>
           </div>
 
-          {/* ✅ Month 下拉选择 */}
+          {/* Month */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
             <select
@@ -173,14 +192,15 @@ const History: React.FC = () => {
                   </span>
                 </div>
 
-                <p className="text-sm text-gray-500">{session.date}</p>
+                {/* ✅ 显示周几 + 日期 */}
+                <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
 
                 {session.note && (
                   <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
                 )}
               </div>
 
-              {/* ✅ Edit + Delete */}
+              {/* Edit + Delete */}
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => openEdit(session)}
@@ -205,7 +225,7 @@ const History: React.FC = () => {
         )}
       </div>
 
-      {/* ✅ Edit Modal */}
+      {/* Edit Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div
@@ -228,7 +248,13 @@ const History: React.FC = () => {
             </select>
 
             {/* Date */}
-            <label className="block text-sm font-medium text-gray-700 mb-1">Date</label>
+            <div className="mb-1 flex items-end justify-between">
+              <label className="block text-sm font-medium text-gray-700">Date</label>
+              {/* ✅ 弹窗里也显示周几 */}
+              {editDateLabel && (
+                <span className="text-xs text-gray-400">{editDateLabel}</span>
+              )}
+            </div>
             <input
               type="date"
               value={editForm.date}
