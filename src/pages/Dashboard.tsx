@@ -5,6 +5,7 @@ import { useStudentData } from '../context/StudentContext';
 const FOLDER_LABELS: Record<string, string> = {
   "1": "授课记录",
   "2": "学习记录",
+  "3": "课包记录",
 };
 
 // ✅ 获取“洛杉矶今天”的 YYYY-MM-DD，避免晚上变成第二天（UTC bug）
@@ -30,7 +31,7 @@ const weekdayLabel = (ymd: string, locale = 'en-US') => {
 const Dashboard: React.FC = () => {
   const { students, addClassSession } = useStudentData();
 
-  // ✅ NEW: 选择记录分组（默认 1：授课记录）
+  // ✅ 选择记录分组（默认 1：授课记录）
   const [folder, setFolder] = useState<string>("1");
 
   const [selectedStudentId, setSelectedStudentId] = useState('');
@@ -44,7 +45,7 @@ const Dashboard: React.FC = () => {
     e.preventDefault();
     if (!selectedStudentId) return;
 
-    // ✅ CHANGED: new signature addClassSession(folder, studentId, ...)
+    // ✅ addClassSession(folder, studentId, ...)
     addClassSession(folder, selectedStudentId, classDate, duration, note);
 
     setSelectedStudentId('');
@@ -68,7 +69,7 @@ const Dashboard: React.FC = () => {
 
             <form onSubmit={handleQuickLog} className="space-y-4">
 
-              {/* ✅ NEW: Folder */}
+              {/* ✅ Folder */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   记录类型
@@ -80,6 +81,7 @@ const Dashboard: React.FC = () => {
                 >
                   <option value="1">{FOLDER_LABELS["1"]}</option>
                   <option value="2">{FOLDER_LABELS["2"]}</option>
+                  <option value="3">{FOLDER_LABELS["3"]}</option>
                 </select>
               </div>
 

@@ -8,6 +8,7 @@ const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 const FOLDER_LABELS: Record<string, string> = {
   "1": "授课记录",
   "2": "学习记录",
+  "3": "课包记录",
 };
 
 // ✅ 显示：周几 + YYYY-MM-DD（稳定，不走 UTC）
@@ -25,14 +26,14 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
 };
 
 const History: React.FC = () => {
-  // ✅ CHANGED: add deleteClassSessions for bulk delete
+  // ✅ add deleteClassSessions for bulk delete
   const { sessions, students, deleteClassSession, deleteClassSessions, updateClassSession } = useStudentData();
 
   const [selectedFolder, setSelectedFolder] = useState<string>('1');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('ALL');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
 
-  // ✅ NEW: bulk selection state
+  // ✅ bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // ====== Edit Modal State ======
@@ -98,7 +99,7 @@ const History: React.FC = () => {
     return filteredSessions.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
   }, [filteredSessions]);
 
-  // ✅ NEW: 当筛选条件变化时，把不在当前列表里的勾选项清掉（避免误删）
+  // ✅ 当筛选条件变化时，把不在当前列表里的勾选项清掉（避免误删）
   useEffect(() => {
     const visible = new Set(filteredSessions.map(s => s.id));
     setSelectedIds(prev => {
@@ -110,7 +111,7 @@ const History: React.FC = () => {
     });
   }, [filteredSessions]);
 
-  // ✅ NEW: bulk helpers
+  // ✅ bulk helpers
   const allVisibleIds = useMemo(() => filteredSessions.map(s => s.id), [filteredSessions]);
   const allSelected = useMemo(
     () => allVisibleIds.length > 0 && selectedIds.size === allVisibleIds.length,
@@ -201,6 +202,7 @@ const History: React.FC = () => {
             >
               <option value="1">{FOLDER_LABELS["1"]}</option>
               <option value="2">{FOLDER_LABELS["2"]}</option>
+              <option value="3">{FOLDER_LABELS["3"]}</option>
             </select>
           </div>
 
@@ -239,7 +241,7 @@ const History: React.FC = () => {
           </div>
         </div>
 
-        {/* ✅ NEW: Bulk action bar */}
+        {/* Bulk action bar */}
         <div className="flex items-center justify-between pt-2">
           <div className="text-sm text-gray-500">
             Selected: <span className="font-semibold">{selectedIds.size}</span>
@@ -291,7 +293,6 @@ const History: React.FC = () => {
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start"
             >
               <div className="flex items-start gap-3">
-                {/* ✅ NEW: checkbox */}
                 <input
                   type="checkbox"
                   checked={selectedIds.has(session.id)}
