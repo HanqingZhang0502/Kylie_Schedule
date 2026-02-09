@@ -25,13 +25,15 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
 };
 
 const History: React.FC = () => {
-  const { sessions, students, deleteClassSession, updateClassSession } = useStudentData();
+  // ✅ CHANGED: add deleteClassSessions for bulk delete
+  const { sessions, students, deleteClassSession, deleteClassSessions, updateClassSession } = useStudentData();
 
-  // ✅ NEW: 记录类型筛选（默认 1：授课记录）
   const [selectedFolder, setSelectedFolder] = useState<string>('1');
-
   const [selectedStudentId, setSelectedStudentId] = useState<string>('ALL');
   const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // ✅ NEW: bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
 
   // ====== Edit Modal State ======
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -39,10 +41,10 @@ const History: React.FC = () => {
 
   const [editForm, setEditForm] = useState<{
     studentId: string;
-    date: string;       // "YYYY-MM-DD"
-    duration: string;   // string for controlled input
+    date: string;
+    duration: string;
     note: string;
-    folder: string;     // ✅ keep folder so Edit won't lose it
+    folder: string;
   }>({
     studentId: '',
     date: '',
@@ -64,7 +66,7 @@ const History: React.FC = () => {
     const set = new Set<string>();
     folderSessions.forEach(s => {
       if (s.date && s.date.length >= 7) {
-        set.add(s.date.slice(0, 7)); // YYYY-MM
+        set.add(s.date.slice(0, 7));
       }
     });
     return Array.from(set).sort((a, b) => (a < b ? 1 : -1));
@@ -76,7 +78,6 @@ const History: React.FC = () => {
       setSelectedMonth('');
       return;
     }
-    // 如果当前 selectedMonth 不在可选范围，或者为空，则选最新
     if (!selectedMonth || !availableMonths.includes(selectedMonth)) {
       setSelectedMonth(availableMonths[0]);
     }
@@ -89,13 +90,59 @@ const History: React.FC = () => {
     return folderSessions
       .filter(s => monthKey(s.date) === selectedMonth)
       .filter(s => (selectedStudentId === 'ALL' ? true : s.studentId === selectedStudentId))
-      .sort((a, b) => b.date.localeCompare(a.date)); // YYYY-MM-DD 字符串排序最稳
+      .sort((a, b) => b.date.localeCompare(a.date));
   }, [folderSessions, selectedMonth, selectedStudentId]);
 
   /* ✅ 当前筛选条件下的总课时 */
   const totalHours = useMemo(() => {
     return filteredSessions.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
   }, [filteredSessions]);
+
+  // ✅ NEW: 当筛选条件变化时，把不在当前列表里的勾选项清掉（避免误删）
+  useEffect(() => {
+    const visible = new Set(filteredSessions.map(s => s.id));
+    setSelectedIds(prev => {
+      const next = new Set<string>();
+      prev.forEach(id => {
+        if (visible.has(id)) next.add(id);
+      });
+      return next;
+    });
+  }, [filteredSessions]);
+
+  // ✅ NEW: bulk helpers
+  const allVisibleIds = useMemo(() => filteredSessions.map(s => s.id), [filteredSessions]);
+  const allSelected = useMemo(
+    () => allVisibleIds.length > 0 && selectedIds.size === allVisibleIds.length,
+    [allVisibleIds, selectedIds]
+  );
+
+  const toggleOne = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    setSelectedIds(() => {
+      if (allSelected) return new Set();       // clear
+      return new Set(allVisibleIds);           // select all visible
+    });
+  };
+
+  const bulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+
+    const ok = confirm(`Delete ${count} selected record(s)? This cannot be undone.`);
+    if (!ok) return;
+
+    await deleteClassSessions(Array.from(selectedIds));
+    setSelectedIds(new Set());
+  };
 
   // ====== Edit Handlers ======
   const openEdit = (session: any) => {
@@ -105,7 +152,7 @@ const History: React.FC = () => {
       date: session.date,
       duration: String(session.duration ?? ''),
       note: session.note ?? '',
-      folder: session.folder ?? '1', // ✅ keep folder
+      folder: session.folder ?? '1',
     });
     setIsEditOpen(true);
   };
@@ -129,7 +176,7 @@ const History: React.FC = () => {
       date: editForm.date,
       duration: dur,
       note: editForm.note?.trim() || '',
-      folder: editForm.folder || '1', // ✅ write back folder so it never gets lost
+      folder: editForm.folder || '1',
     });
 
     closeEdit();
@@ -141,11 +188,10 @@ const History: React.FC = () => {
 
   return (
     <div className="space-y-4">
-      {/* 筛选器 */}
+      {/* 筛选器 + 批量操作 */}
       <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-
-          {/* ✅ Folder */}
+          {/* Folder */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
             <select
@@ -192,6 +238,32 @@ const History: React.FC = () => {
             </select>
           </div>
         </div>
+
+        {/* ✅ NEW: Bulk action bar */}
+        <div className="flex items-center justify-between pt-2">
+          <div className="text-sm text-gray-500">
+            Selected: <span className="font-semibold">{selectedIds.size}</span>
+          </div>
+          <div className="flex gap-2">
+            <button
+              type="button"
+              onClick={toggleSelectAll}
+              disabled={filteredSessions.length === 0}
+              className="px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+            >
+              {allSelected ? 'Clear' : 'Select All'}
+            </button>
+
+            <button
+              type="button"
+              onClick={bulkDelete}
+              disabled={selectedIds.size === 0}
+              className="px-3 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+            >
+              Delete Selected
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* 总课时 */}
@@ -203,7 +275,6 @@ const History: React.FC = () => {
         <p className="text-3xl font-bold">{totalHours} hrs</p>
       </div>
 
-      {/* 历史记录 */}
       <h2 className="text-lg font-bold text-gray-800 mb-2">
         Class History · {FOLDER_LABELS[selectedFolder]}
       </h2>
@@ -219,21 +290,31 @@ const History: React.FC = () => {
               key={session.id}
               className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start"
             >
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-semibold text-gray-800">
-                    {getStudentName(session.studentId)}
-                  </h3>
-                  <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
-                    {session.duration}h
-                  </span>
+              <div className="flex items-start gap-3">
+                {/* ✅ NEW: checkbox */}
+                <input
+                  type="checkbox"
+                  checked={selectedIds.has(session.id)}
+                  onChange={() => toggleOne(session.id)}
+                  className="mt-1 h-4 w-4"
+                />
+
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-gray-800">
+                      {getStudentName(session.studentId)}
+                    </h3>
+                    <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                      {session.duration}h
+                    </span>
+                  </div>
+
+                  <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
+
+                  {session.note && (
+                    <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
+                  )}
                 </div>
-
-                <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
-
-                {session.note && (
-                  <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
-                )}
               </div>
 
               <div className="flex items-center gap-1">
@@ -263,10 +344,7 @@ const History: React.FC = () => {
       {/* Edit Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div
-            className="absolute inset-0 bg-black/40"
-            onClick={closeEdit}
-          />
+          <div className="absolute inset-0 bg-black/40" onClick={closeEdit} />
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
 
@@ -281,12 +359,9 @@ const History: React.FC = () => {
               ))}
             </select>
 
-            {/* Date */}
             <div className="mb-1 flex items-end justify-between">
               <label className="block text-sm font-medium text-gray-700">Date</label>
-              {editDateLabel && (
-                <span className="text-xs text-gray-400">{editDateLabel}</span>
-              )}
+              {editDateLabel && <span className="text-xs text-gray-400">{editDateLabel}</span>}
             </div>
             <input
               type="date"
@@ -295,7 +370,6 @@ const History: React.FC = () => {
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
             />
 
-            {/* Duration */}
             <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
             <input
               type="number"
@@ -306,7 +380,6 @@ const History: React.FC = () => {
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
             />
 
-            {/* Note */}
             <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
             <input
               type="text"
@@ -333,7 +406,6 @@ const History: React.FC = () => {
           </div>
         </div>
       )}
-
     </div>
   );
 };

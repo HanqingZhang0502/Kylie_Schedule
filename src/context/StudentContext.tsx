@@ -9,6 +9,7 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
+  writeBatch, // ✅ NEW
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
@@ -18,10 +19,13 @@ interface StudentContextType {
   addStudent: (name: string, note?: string) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
 
-  // ✅ CHANGED: add folder (History 1/2/3...) as first param
+  // ✅ add folder (History 1/2...) as first param
   addClassSession: (folder: string, studentId: string, date: string, duration: number, note?: string) => Promise<void>;
 
   deleteClassSession: (id: string) => Promise<void>;
+
+  // ✅ NEW: bulk delete sessions
+  deleteClassSessions: (ids: string[]) => Promise<void>;
 
   // ✅ update session (for Edit)
   updateClassSession: (id: string, updates: Partial<Omit<ClassSession, 'id'>>) => Promise<void>;
@@ -86,7 +90,7 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'students', id));
   };
 
-  // ✅ CHANGED: add folder + write to Firestore
+  // ✅ add folder + write to Firestore
   // folder: "1" = kids/teaching, "2" = her own training, etc.
   const addClassSession = async (folder: string, studentId: string, date: string, duration: number, note?: string) => {
     if (!user) return;
@@ -103,6 +107,19 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteClassSession = async (id: string) => {
     if (!user) return;
     await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
+  };
+
+  // ✅ NEW: bulk delete (more efficient than looping deleteDoc)
+  const deleteClassSessions = async (ids: string[]) => {
+    if (!user) return;
+    if (!ids || ids.length === 0) return;
+
+    const batch = writeBatch(db);
+    ids.forEach((id) => {
+      batch.delete(doc(db, 'users', user.uid, 'sessions', id));
+    });
+
+    await batch.commit();
   };
 
   const updateClassSession = async (id: string, updates: Partial<Omit<ClassSession, 'id'>>) => {
@@ -126,6 +143,7 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       deleteStudent,
       addClassSession,
       deleteClassSession,
+      deleteClassSessions, // ✅ expose
       updateClassSession,
       getStudentSessions
     }}>
