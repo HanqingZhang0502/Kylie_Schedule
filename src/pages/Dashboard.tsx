@@ -28,8 +28,40 @@ const weekdayLabel = (ymd: string, locale = 'en-US') => {
   return `${weekday}, ${pretty}`;
 };
 
+// ✅ 只对 folder=2/3 使用课包逻辑
+const isPackageFolder = (folder: string) => folder === '2' || folder === '3';
+
+// ✅ 计算“下一条记录应该写入的 packageNo”
+// 规则：同一 studentId + folder 下，找到最大 packageNo；如果该 package 已有 >=10 条记录，则 +1
+const calcNextPackageNo = (allSessions: any[], folder: string, studentId: string) => {
+  // 只在 folder=2/3 才算
+  if (!isPackageFolder(folder)) return undefined;
+
+  const related = allSessions.filter(
+    (s) => (s.folder ?? '1') === folder && s.studentId === studentId
+  );
+
+  if (related.length === 0) return 1;
+
+  // 旧数据没 packageNo 的，按 1 处理（兜底）
+  let maxPkg = 1;
+  for (const s of related) {
+    const pn = typeof s.packageNo === 'number' ? s.packageNo : 1;
+    if (pn > maxPkg) maxPkg = pn;
+  }
+
+  const countInMax = related.filter((s) => (typeof s.packageNo === 'number' ? s.packageNo : 1) === maxPkg).length;
+
+  // 满 10 次，下一条进入新课包
+  if (countInMax >= 10) return maxPkg + 1;
+
+  // 未满 10 次，继续当前课包
+  return maxPkg;
+};
+
 const Dashboard: React.FC = () => {
-  const { students, addClassSession } = useStudentData();
+  // ✅ 这里要拿到 sessions，才能算 packageNo
+  const { students, sessions, addClassSession } = useStudentData();
 
   // ✅ 选择记录分组（默认 1：授课记录）
   const [folder, setFolder] = useState<string>("1");
@@ -41,12 +73,21 @@ const Dashboard: React.FC = () => {
 
   const classDateLabel = useMemo(() => weekdayLabel(classDate, 'en-US'), [classDate]);
 
-  const handleQuickLog = (e: React.FormEvent) => {
+  // ✅ 实时预览：如果当前选择是学习/课包记录，则显示系统即将使用的 Package #
+  const previewPackageNo = useMemo(() => {
+    if (!selectedStudentId) return undefined;
+    return calcNextPackageNo(sessions as any[], folder, selectedStudentId);
+  }, [sessions, folder, selectedStudentId]);
+
+  const handleQuickLog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentId) return;
 
-    // ✅ addClassSession(folder, studentId, ...)
-    addClassSession(folder, selectedStudentId, classDate, duration, note);
+    // ✅ 自动决定 packageNo（仅 folder=2/3）
+    const packageNo = calcNextPackageNo(sessions as any[], folder, selectedStudentId);
+
+    // ✅ CHANGED signature: addClassSession(folder, studentId, date, duration, note, packageNo?)
+    await addClassSession(folder, selectedStudentId, classDate, duration, note, packageNo);
 
     setSelectedStudentId('');
     setDuration(1);
@@ -69,7 +110,7 @@ const Dashboard: React.FC = () => {
 
             <form onSubmit={handleQuickLog} className="space-y-4">
 
-              {/* ✅ Folder */}
+              {/* Folder */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   记录类型
@@ -103,6 +144,16 @@ const Dashboard: React.FC = () => {
                     </option>
                   ))}
                 </select>
+
+                {/* ✅ 仅 folder=2/3 时显示预览 */}
+                {selectedStudentId && isPackageFolder(folder) && previewPackageNo && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    将记录到：<span className="font-semibold">Package {previewPackageNo}</span>
+                    <span className="ml-1 text-gray-400">
+                      （每满 10 次自动进入下一包）
+                    </span>
+                  </p>
+                )}
               </div>
 
               {/* Date */}

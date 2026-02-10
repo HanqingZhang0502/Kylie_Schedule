@@ -9,7 +9,7 @@ import {
   onSnapshot,
   serverTimestamp,
   updateDoc,
-  writeBatch, // ✅ NEW
+  writeBatch,
 } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 
@@ -19,12 +19,19 @@ interface StudentContextType {
   addStudent: (name: string, note?: string) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
 
-  // ✅ add folder (History 1/2...) as first param
-  addClassSession: (folder: string, studentId: string, date: string, duration: number, note?: string) => Promise<void>;
+  // ✅ CHANGED: add optional packageNo (for folder=2/3 package mode)
+  addClassSession: (
+    folder: string,
+    studentId: string,
+    date: string,
+    duration: number,
+    note?: string,
+    packageNo?: number
+  ) => Promise<void>;
 
   deleteClassSession: (id: string) => Promise<void>;
 
-  // ✅ NEW: bulk delete sessions
+  // ✅ bulk delete sessions
   deleteClassSessions: (ids: string[]) => Promise<void>;
 
   // ✅ update session (for Edit)
@@ -49,7 +56,6 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return () => unsubAuth();
     }
 
-    // users/{uid}/students
     const studentsRef = collection(db, 'users', user.uid, 'students');
     const unsubStudents = onSnapshot(studentsRef, (snapshot) => {
       const loadedStudents = snapshot.docs.map(d => ({
@@ -59,7 +65,6 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setStudents(loadedStudents);
     });
 
-    // users/{uid}/sessions
     const sessionsRef = collection(db, 'users', user.uid, 'sessions');
     const unsubSessions = onSnapshot(sessionsRef, (snapshot) => {
       const loadedSessions = snapshot.docs.map(d => ({
@@ -90,18 +95,33 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'students', id));
   };
 
-  // ✅ add folder + write to Firestore
-  // folder: "1" = kids/teaching, "2" = her own training, etc.
-  const addClassSession = async (folder: string, studentId: string, date: string, duration: number, note?: string) => {
+  // ✅ CHANGED: add packageNo (optional)
+  // folder: "1"=授课, "2"=学习, "3"=课包
+  const addClassSession = async (
+    folder: string,
+    studentId: string,
+    date: string,
+    duration: number,
+    note?: string,
+    packageNo?: number
+  ) => {
     if (!user) return;
-    await addDoc(collection(db, 'users', user.uid, 'sessions'), {
-      folder: folder || '1', // ✅ default to "1" for old behavior
+
+    const payload: any = {
+      folder: folder || '1',
       studentId,
-      date,      // keep as "YYYY-MM-DD" string
+      date, // keep as "YYYY-MM-DD" string
       duration,
       note,
       createdAt: serverTimestamp(),
-    });
+    };
+
+    // ✅ only write if provided (keeps folder=1 clean)
+    if (typeof packageNo === 'number' && !Number.isNaN(packageNo)) {
+      payload.packageNo = packageNo;
+    }
+
+    await addDoc(collection(db, 'users', user.uid, 'sessions'), payload);
   };
 
   const deleteClassSession = async (id: string) => {
@@ -109,7 +129,6 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'sessions', id));
   };
 
-  // ✅ NEW: bulk delete (more efficient than looping deleteDoc)
   const deleteClassSessions = async (ids: string[]) => {
     if (!user) return;
     if (!ids || ids.length === 0) return;
@@ -143,7 +162,7 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
       deleteStudent,
       addClassSession,
       deleteClassSession,
-      deleteClassSessions, // ✅ expose
+      deleteClassSessions,
       updateClassSession,
       getStudentSessions
     }}>

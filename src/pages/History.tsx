@@ -4,14 +4,12 @@ import { Trash2, Pencil } from 'lucide-react';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
-// ✅ folder 显示名（只影响 UI，不影响数据）
 const FOLDER_LABELS: Record<string, string> = {
   "1": "授课记录",
   "2": "学习记录",
   "3": "课包记录",
 };
 
-// ✅ 显示：周几 + YYYY-MM-DD（稳定，不走 UTC）
 const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   const m = ymd.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (!m) return ymd;
@@ -25,8 +23,25 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   return `${weekday} ${ymd}`;
 };
 
+// ✅ 学习/课包才是“课包模式”
+const isPackageFolder = (folder: string) => folder === '2' || folder === '3';
+
+// ✅ 老数据没写 packageNo 的，兜底算 1
+const getPkgNo = (s: any) => (typeof s.packageNo === 'number' ? s.packageNo : 1);
+
+// ✅ 用于计算序号：日期升序，再用 createdAt 升序兜底，最后用 id
+const sortForOrdinal = (a: any, b: any) => {
+  const d = String(a.date || '').localeCompare(String(b.date || ''));
+  if (d !== 0) return d;
+
+  const ta = a?.createdAt?.seconds ?? 0;
+  const tb = b?.createdAt?.seconds ?? 0;
+  if (ta !== tb) return ta - tb;
+
+  return String(a.id).localeCompare(String(b.id));
+};
+
 const History: React.FC = () => {
-  // ✅ add deleteClassSessions for bulk delete
   const { sessions, students, deleteClassSession, deleteClassSessions, updateClassSession } = useStudentData();
 
   const [selectedFolder, setSelectedFolder] = useState<string>('1');
@@ -61,6 +76,30 @@ const History: React.FC = () => {
   const folderSessions = useMemo(() => {
     return sessions.filter(s => (s.folder ?? '1') === selectedFolder);
   }, [sessions, selectedFolder]);
+
+  // ✅ NEW：给每条 session 算出在本 package 里的序号 #1/#2...
+  // 注意：用 folderSessions（不受月份筛选影响），这样跨月也不会把 # 重置
+  const ordinalMap = useMemo(() => {
+    const map = new Map<string, number>();
+    if (!isPackageFolder(selectedFolder)) return map;
+
+    // group by studentId + packageNo
+    const groups = new Map<string, any[]>();
+    for (const s of folderSessions as any[]) {
+      const key = `${s.studentId}__${getPkgNo(s)}`;
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(s);
+    }
+
+    for (const [, arr] of groups) {
+      const sorted = [...arr].sort(sortForOrdinal);
+      sorted.forEach((s, idx) => {
+        map.set(String(s.id), idx + 1);
+      });
+    }
+
+    return map;
+  }, [folderSessions, selectedFolder]);
 
   /* ✅ 从“当前 folderSessions”里自动生成可选月份 */
   const availableMonths = useMemo(() => {
@@ -111,7 +150,6 @@ const History: React.FC = () => {
     });
   }, [filteredSessions]);
 
-  // ✅ bulk helpers
   const allVisibleIds = useMemo(() => filteredSessions.map(s => s.id), [filteredSessions]);
   const allSelected = useMemo(
     () => allVisibleIds.length > 0 && selectedIds.size === allVisibleIds.length,
@@ -129,8 +167,8 @@ const History: React.FC = () => {
 
   const toggleSelectAll = () => {
     setSelectedIds(() => {
-      if (allSelected) return new Set();       // clear
-      return new Set(allVisibleIds);           // select all visible
+      if (allSelected) return new Set();
+      return new Set(allVisibleIds);
     });
   };
 
@@ -287,58 +325,72 @@ const History: React.FC = () => {
             No classes for this selection.
           </div>
         ) : (
-          filteredSessions.map(session => (
-            <div
-              key={session.id}
-              className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start"
-            >
-              <div className="flex items-start gap-3">
-                <input
-                  type="checkbox"
-                  checked={selectedIds.has(session.id)}
-                  onChange={() => toggleOne(session.id)}
-                  className="mt-1 h-4 w-4"
-                />
+          filteredSessions.map((session: any) => {
+            const showPkg = isPackageFolder(selectedFolder);
+            const pkgNo = showPkg ? getPkgNo(session) : undefined;
+            const ord = showPkg ? (ordinalMap.get(String(session.id)) ?? undefined) : undefined;
 
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-gray-800">
-                      {getStudentName(session.studentId)}
-                    </h3>
-                    <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
-                      {session.duration}h
-                    </span>
+            return (
+              <div
+                key={session.id}
+                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start"
+              >
+                <div className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(session.id)}
+                    onChange={() => toggleOne(session.id)}
+                    className="mt-1 h-4 w-4"
+                  />
+
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-semibold text-gray-800">
+                        {getStudentName(session.studentId)}
+                      </h3>
+
+                      {/* ✅ NEW: Package X · #Y（仅 folder=2/3） */}
+                      {showPkg && pkgNo && ord && (
+                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                          Package {pkgNo} · #{ord}
+                        </span>
+                      )}
+
+                      <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                        {session.duration}h
+                      </span>
+                    </div>
+
+                    <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
+
+                    {session.note && (
+                      <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
+                    )}
                   </div>
+                </div>
 
-                  <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => openEdit(session)}
+                    className="text-gray-300 hover:text-gray-700 p-2"
+                    title="Edit"
+                  >
+                    <Pencil size={16} />
+                  </button>
 
-                  {session.note && (
-                    <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
-                  )}
+                  <button
+                    onClick={() => {
+                      if (confirm('Delete this record?')) deleteClassSession(session.id);
+                    }}
+                    className="text-gray-300 hover:text-red-500 p-2"
+                    title="Delete"
+                  >
+                    <Trash2 size={16} />
+                  </button>
                 </div>
               </div>
-
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => openEdit(session)}
-                  className="text-gray-300 hover:text-gray-700 p-2"
-                  title="Edit"
-                >
-                  <Pencil size={16} />
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (confirm('Delete this record?')) deleteClassSession(session.id);
-                  }}
-                  className="text-gray-300 hover:text-red-500 p-2"
-                  title="Delete"
-                >
-                  <Trash2 size={16} />
-                </button>
-              </div>
-            </div>
-          ))
+            );
+          })
         )}
       </div>
 

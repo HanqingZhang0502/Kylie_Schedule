@@ -13,8 +13,12 @@ export interface ClassSession {
   date: string; // YYYY-MM-DD
   duration: number;
   note?: string;
-  folder?: string; // ✅ NEW: 1/2/3... 用来区分不同“历史记录分组”
+
+  folder?: string;      // 1=授课记录 2=学习记录 3=课包记录
+  packageNo?: number;   // ✅ NEW: 课包期数（1,2,3...）仅用于 folder=2/3
+
   createdAt?: Timestamp;
+  updatedAt?: Timestamp;
 }
 
 export interface AppData {
