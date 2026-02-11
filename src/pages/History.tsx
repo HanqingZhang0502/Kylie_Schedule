@@ -41,12 +41,16 @@ const sortForOrdinal = (a: any, b: any) => {
   return String(a.id).localeCompare(String(b.id));
 };
 
+const ALL_TIME_VALUE = 'ALL_TIME';
+
 const History: React.FC = () => {
   const { sessions, students, deleteClassSession, deleteClassSessions, updateClassSession } = useStudentData();
 
   const [selectedFolder, setSelectedFolder] = useState<string>('1');
   const [selectedStudentId, setSelectedStudentId] = useState<string>('ALL');
-  const [selectedMonth, setSelectedMonth] = useState<string>('');
+
+  // ✅ Month 增加 All Time
+  const [selectedMonth, setSelectedMonth] = useState<string>(ALL_TIME_VALUE);
 
   // ✅ bulk selection state
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -74,7 +78,7 @@ const History: React.FC = () => {
 
   // ✅ 先按 folder 分组（旧数据没 folder 的默认算 1）
   const folderSessions = useMemo(() => {
-    return sessions.filter(s => (s.folder ?? '1') === selectedFolder);
+    return sessions.filter((s: any) => (s.folder ?? '1') === selectedFolder);
   }, [sessions, selectedFolder]);
 
   // ✅ NEW：给每条 session 算出在本 package 里的序号 #1/#2...
@@ -83,7 +87,6 @@ const History: React.FC = () => {
     const map = new Map<string, number>();
     if (!isPackageFolder(selectedFolder)) return map;
 
-    // group by studentId + packageNo
     const groups = new Map<string, any[]>();
     for (const s of folderSessions as any[]) {
       const key = `${s.studentId}__${getPkgNo(s)}`;
@@ -101,46 +104,55 @@ const History: React.FC = () => {
     return map;
   }, [folderSessions, selectedFolder]);
 
-  /* ✅ 从“当前 folderSessions”里自动生成可选月份 */
+  /* ✅ 从“当前 folderSessions”里自动生成可选月份 + All Time */
   const availableMonths = useMemo(() => {
     const set = new Set<string>();
-    folderSessions.forEach(s => {
+    folderSessions.forEach((s: any) => {
       if (s.date && s.date.length >= 7) {
         set.add(s.date.slice(0, 7));
       }
     });
-    return Array.from(set).sort((a, b) => (a < b ? 1 : -1));
+
+    const months = Array.from(set).sort((a, b) => (a < b ? 1 : -1));
+    // ✅ 把 All Time 放在最前面
+    return [ALL_TIME_VALUE, ...months];
   }, [folderSessions]);
 
-  /* ✅ 默认选最新月份（当 folder 切换时也会重新设定） */
+  /* ✅ 默认 Month：如果当前选择不在列表里，重置为 All Time */
   useEffect(() => {
     if (availableMonths.length === 0) {
-      setSelectedMonth('');
+      setSelectedMonth(ALL_TIME_VALUE);
       return;
     }
     if (!selectedMonth || !availableMonths.includes(selectedMonth)) {
-      setSelectedMonth(availableMonths[0]);
+      setSelectedMonth(ALL_TIME_VALUE);
     }
   }, [availableMonths, selectedMonth]);
 
-  /* ✅ 根据 folder + 学生 + 月份筛选 */
+  /* ✅ 根据 folder + 学生 + Month(All Time) 筛选 */
   const filteredSessions = useMemo(() => {
-    if (!selectedMonth) return [];
+    const base = folderSessions
+      .filter((s: any) => (selectedStudentId === 'ALL' ? true : s.studentId === selectedStudentId));
 
-    return folderSessions
-      .filter(s => monthKey(s.date) === selectedMonth)
-      .filter(s => (selectedStudentId === 'ALL' ? true : s.studentId === selectedStudentId))
-      .sort((a, b) => b.date.localeCompare(a.date));
+    // ✅ All Time：不过滤月份
+    if (selectedMonth === ALL_TIME_VALUE) {
+      return [...base].sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)));
+    }
+
+    // ✅ 按月过滤
+    return base
+      .filter((s: any) => monthKey(s.date) === selectedMonth)
+      .sort((a: any, b: any) => String(b.date).localeCompare(String(a.date)));
   }, [folderSessions, selectedMonth, selectedStudentId]);
 
   /* ✅ 当前筛选条件下的总课时 */
   const totalHours = useMemo(() => {
-    return filteredSessions.reduce((acc, s) => acc + (Number(s.duration) || 0), 0);
+    return filteredSessions.reduce((acc: number, s: any) => acc + (Number(s.duration) || 0), 0);
   }, [filteredSessions]);
 
   // ✅ 当筛选条件变化时，把不在当前列表里的勾选项清掉（避免误删）
   useEffect(() => {
-    const visible = new Set(filteredSessions.map(s => s.id));
+    const visible = new Set(filteredSessions.map((s: any) => s.id));
     setSelectedIds(prev => {
       const next = new Set<string>();
       prev.forEach(id => {
@@ -150,7 +162,7 @@ const History: React.FC = () => {
     });
   }, [filteredSessions]);
 
-  const allVisibleIds = useMemo(() => filteredSessions.map(s => s.id), [filteredSessions]);
+  const allVisibleIds = useMemo(() => filteredSessions.map((s: any) => s.id), [filteredSessions]);
   const allSelected = useMemo(
     () => allVisibleIds.length > 0 && selectedIds.size === allVisibleIds.length,
     [allVisibleIds, selectedIds]
@@ -269,10 +281,12 @@ const History: React.FC = () => {
               disabled={availableMonths.length === 0}
             >
               {availableMonths.length === 0 ? (
-                <option value="">No data yet</option>
+                <option value={ALL_TIME_VALUE}>All Time</option>
               ) : (
                 availableMonths.map(m => (
-                  <option key={m} value={m}>{m}</option>
+                  <option key={m} value={m}>
+                    {m === ALL_TIME_VALUE ? 'All Time' : m}
+                  </option>
                 ))
               )}
             </select>
@@ -309,7 +323,7 @@ const History: React.FC = () => {
       {/* 总课时 */}
       <div className="bg-rose-600 text-white p-4 rounded-xl shadow-lg shadow-rose-200">
         <p className="text-rose-100 text-sm">
-          Total Hours · {selectedMonth || '—'} · {FOLDER_LABELS[selectedFolder]}
+          Total Hours · {selectedMonth === ALL_TIME_VALUE ? 'All Time' : (selectedMonth || '—')} · {FOLDER_LABELS[selectedFolder]}
           {selectedStudentId === 'ALL' ? '' : ` · ${getStudentName(selectedStudentId)}`}
         </p>
         <p className="text-3xl font-bold">{totalHours} hrs</p>
@@ -349,7 +363,7 @@ const History: React.FC = () => {
                         {getStudentName(session.studentId)}
                       </h3>
 
-                      {/* ✅ NEW: Package X · #Y（仅 folder=2/3） */}
+                      {/* ✅ Package X · #Y（仅 folder=2/3） */}
                       {showPkg && pkgNo && ord && (
                         <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
                           Package {pkgNo} · #{ord}
