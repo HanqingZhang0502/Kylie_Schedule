@@ -3,8 +3,8 @@ import { useStudentData } from '../context/StudentContext';
 
 // ✅ folder 显示名（只影响 UI，不影响数据）
 const FOLDER_LABELS: Record<string, string> = {
-  "1": "授课记录",
-  "2": "学习记录",
+  "1": "在外授课记录",
+  "2": "Kylie的学习记录",
   "3": "课包记录",
 };
 

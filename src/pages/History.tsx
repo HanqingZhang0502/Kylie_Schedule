@@ -5,8 +5,8 @@ import { Trash2, Pencil } from 'lucide-react';
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
 const FOLDER_LABELS: Record<string, string> = {
-  "1": "授课记录",
-  "2": "学习记录",
+  "1": "在外授课记录",
+  "2": "Kylie的学习记录",
   "3": "课包记录",
 };
 
