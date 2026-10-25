@@ -6,6 +6,7 @@ const FOLDER_LABELS: Record<string, string> = {
   "1": "在外授课记录",
   "2": "Kylie的学习记录",
   "3": "课包记录",
+  "4": "在外私课",
 };
 
 // ✅ 获取“洛杉矶今天”的 YYYY-MM-DD，避免晚上变成第二天（UTC bug）
@@ -123,6 +124,7 @@ const Dashboard: React.FC = () => {
                   <option value="1">{FOLDER_LABELS["1"]}</option>
                   <option value="2">{FOLDER_LABELS["2"]}</option>
                   <option value="3">{FOLDER_LABELS["3"]}</option>
+                  <option value="4">{FOLDER_LABELS["4"]}</option>
                 </select>
               </div>
 
