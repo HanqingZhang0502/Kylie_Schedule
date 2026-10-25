@@ -31,6 +31,11 @@ const Login: React.FC = () => {
     return (
         <div className="min-h-screen flex items-center justify-center bg-rose-50 p-4">
             <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-rose-100">
+                <img
+                    src="/logo-k.png"
+                    alt="Kylie Schedule"
+                    className="h-14 w-14 object-contain mx-auto mb-4"
+                />
                 <h1 className="text-2xl font-bold text-center text-rose-600 mb-2">
                     {isLogin ? 'Welcome Back! 💃' : 'Join Kylie Schedule'}
                 </h1>

@@ -16,8 +16,14 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       {/* Header */}
       <header className="bg-rose-600 text-white p-4 shadow-md sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          {/* 左侧占位，保证标题视觉居中 */}
-          <div className="w-16" />
+          {/* 左侧 logo，同时平衡右侧 Logout 的视觉宽度 */}
+          <div className="w-16 flex items-center">
+            <img
+              src="/logo-k.png"
+              alt=""
+              className="h-8 w-8 object-contain"
+            />
+          </div>
 
           <h1 className="text-xl font-bold text-center flex-1">
             💃 Kylie Schedule
@@ -36,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
         {/* 当前登录账号（调试用，确认 Vercel 登录的是谁） */}
         {currentUser?.email && (
-          <div className="text-center text-xs text-white/80 mt-1">
+          <div className="text-center text-[10px] text-white/50 mt-1 tracking-wide">
             {currentUser.email}
           </div>
         )}

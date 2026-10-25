@@ -1,6 +1,7 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import { Trash2, Pencil } from 'lucide-react';
+import Select from '../components/Select';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
@@ -246,7 +247,7 @@ const History: React.FC = () => {
           {/* Folder */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
-            <select
+            <Select
               value={selectedFolder}
               onChange={(e) => setSelectedFolder(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
@@ -255,13 +256,13 @@ const History: React.FC = () => {
               <option value="2">{FOLDER_LABELS["2"]}</option>
               <option value="3">{FOLDER_LABELS["3"]}</option>
               <option value="4">{FOLDER_LABELS["4"]}</option>
-            </select>
+            </Select>
           </div>
 
           {/* Student */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-            <select
+            <Select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
@@ -270,13 +271,13 @@ const History: React.FC = () => {
               {students.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+            </Select>
           </div>
 
           {/* Month */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
-            <select
+            <Select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
@@ -291,7 +292,7 @@ const History: React.FC = () => {
                   </option>
                 ))
               )}
-            </select>
+            </Select>
           </div>
         </div>
 
@@ -418,7 +419,7 @@ const History: React.FC = () => {
             <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
-            <select
+            <Select
               value={editForm.studentId}
               onChange={(e) => setEditForm(f => ({ ...f, studentId: e.target.value }))}
               className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
@@ -426,7 +427,7 @@ const History: React.FC = () => {
               {students.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+            </Select>
 
             <div className="mb-1 flex items-end justify-between">
               <label className="block text-sm font-medium text-gray-700">Date</label>
