@@ -130,7 +130,7 @@ const Dashboard: React.FC = () => {
                 type="date"
                 value={classDate}
                 onChange={(e) => setClassDate(e.target.value)}
-                className="block w-full min-w-0 max-w-full box-border overflow-hidden p-3 text-sm bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className="block w-px min-w-full max-w-full box-border overflow-hidden p-3 text-sm bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
               />
               {classDateLabel && (
                 <p className="mt-1 text-xs text-gray-500">

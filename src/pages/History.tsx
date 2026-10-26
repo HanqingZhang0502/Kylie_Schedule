@@ -438,7 +438,7 @@ const History: React.FC = () => {
               type="date"
               value={editForm.date}
               onChange={(e) => setEditForm(f => ({ ...f, date: e.target.value }))}
-              className="block w-full min-w-0 max-w-full box-border overflow-hidden p-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className="block w-px min-w-full max-w-full box-border overflow-hidden p-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
             />
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
