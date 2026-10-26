@@ -395,7 +395,7 @@ const History: React.FC = () => {
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="absolute inset-0 bg-black/40" onClick={closeEdit} />
-          <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
+          <div className="relative w-full min-w-0 max-w-md bg-white rounded-2xl shadow-xl p-5">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
 
             <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
@@ -438,7 +438,7 @@ const History: React.FC = () => {
               type="date"
               value={editForm.date}
               onChange={(e) => setEditForm(f => ({ ...f, date: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className="w-full min-w-0 max-w-full box-border p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
             />
 
             <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
