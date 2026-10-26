@@ -19,14 +19,12 @@ interface StudentContextType {
   addStudent: (name: string, note?: string) => Promise<void>;
   deleteStudent: (id: string) => Promise<void>;
 
-  // ✅ CHANGED: add optional packageNo (for folder=2/3 package mode)
   addClassSession: (
     folder: string,
     studentId: string,
     date: string,
     duration: number,
-    note?: string,
-    packageNo?: number
+    note?: string
   ) => Promise<void>;
 
   deleteClassSession: (id: string) => Promise<void>;
@@ -95,33 +93,24 @@ export const StudentProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await deleteDoc(doc(db, 'users', user.uid, 'students', id));
   };
 
-  // ✅ CHANGED: add packageNo (optional)
-  // folder: "1"=授课, "2"=学习, "3"=课包
+  // folder: "1"=在外授课 "2"=学习记录 "3"=课包记录 "4"=在外私课
   const addClassSession = async (
     folder: string,
     studentId: string,
     date: string,
     duration: number,
-    note?: string,
-    packageNo?: number
+    note?: string
   ) => {
     if (!user) return;
 
-    const payload: any = {
+    await addDoc(collection(db, 'users', user.uid, 'sessions'), {
       folder: folder || '1',
       studentId,
       date, // keep as "YYYY-MM-DD" string
       duration,
       note,
       createdAt: serverTimestamp(),
-    };
-
-    // ✅ only write if provided (keeps folder=1 clean)
-    if (typeof packageNo === 'number' && !Number.isNaN(packageNo)) {
-      payload.packageNo = packageNo;
-    }
-
-    await addDoc(collection(db, 'users', user.uid, 'sessions'), payload);
+    });
   };
 
   const deleteClassSession = async (id: string) => {

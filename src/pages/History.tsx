@@ -2,8 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import { Trash2, Pencil } from 'lucide-react';
 import Select from '../components/Select';
-import { isPackageFolder, getPackageNo as getPkgNo, calcNextPackageNo } from '../lib/package';
-import type { ClassSession } from '../types';
+import { isPackageFolder, computePackagePositions, previewPackagePosition } from '../lib/package';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
@@ -25,18 +24,6 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   const dt = new Date(y, mo - 1, d);
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(dt); // Mon
   return `${weekday} ${ymd}`;
-};
-
-// ✅ 用于计算序号：日期升序，再用 createdAt 升序兜底，最后用 id
-const sortForOrdinal = (a: any, b: any) => {
-  const d = String(a.date || '').localeCompare(String(b.date || ''));
-  if (d !== 0) return d;
-
-  const ta = a?.createdAt?.seconds ?? 0;
-  const tb = b?.createdAt?.seconds ?? 0;
-  if (ta !== tb) return ta - tb;
-
-  return String(a.id).localeCompare(String(b.id));
 };
 
 const ALL_TIME_VALUE = 'ALL_TIME';
@@ -79,27 +66,11 @@ const History: React.FC = () => {
     return sessions.filter((s: any) => (s.folder ?? '1') === selectedFolder);
   }, [sessions, selectedFolder]);
 
-  // ✅ NEW：给每条 session 算出在本 package 里的序号 #1/#2...
-  // 注意：用 folderSessions（不受月份筛选影响），这样跨月也不会把 # 重置
-  const ordinalMap = useMemo(() => {
-    const map = new Map<string, number>();
-    if (!isPackageFolder(selectedFolder)) return map;
-
-    const groups = new Map<string, any[]>();
-    for (const s of folderSessions as any[]) {
-      const key = `${s.studentId}__${getPkgNo(s)}`;
-      if (!groups.has(key)) groups.set(key, []);
-      groups.get(key)!.push(s);
-    }
-
-    for (const [, arr] of groups) {
-      const sorted = [...arr].sort(sortForOrdinal);
-      sorted.forEach((s, idx) => {
-        map.set(String(s.id), idx + 1);
-      });
-    }
-
-    return map;
+  // ✅ 给每条 session 现算出 Package 几 + 包内第几条（按日期排序，不读任何存储字段）
+  // 注意：用 folderSessions（不受月份筛选影响），这样跨月也不会把编号打乱
+  const packagePositions = useMemo(() => {
+    if (!isPackageFolder(selectedFolder)) return new Map<string, { packageNo: number; ordinal: number }>();
+    return computePackagePositions(folderSessions as any[]);
   }, [folderSessions, selectedFolder]);
 
   /* ✅ 从“当前 folderSessions”里自动生成可选月份 + All Time */
@@ -211,26 +182,19 @@ const History: React.FC = () => {
     setEditingSessionId(null);
   };
 
-  // ✅ 编辑的这条记录改之前是什么样（用来判断 folder/学生 有没有变）
-  const editingOriginal = useMemo(
-    () => sessions.find((s: any) => s.id === editingSessionId) as any,
-    [sessions, editingSessionId]
-  );
-
-  // ✅ 只有在"进入课包模式"的那一刻才需要重新算 packageNo：
-  // 目标 folder 是课包类型，并且 folder 或学生跟原来不一样（相当于重新排队）。
-  // 如果只是改日期/时长/备注，课包位置不动。
-  const editWillReassignPackage = useMemo(() => {
-    if (!editingOriginal || !isPackageFolder(editForm.folder)) return false;
-    const folderChanged = (editingOriginal.folder ?? '1') !== editForm.folder;
-    const studentChanged = editingOriginal.studentId !== editForm.studentId;
-    return folderChanged || studentChanged;
-  }, [editingOriginal, editForm.folder, editForm.studentId]);
-
-  const editPreviewPackageNo = useMemo(() => {
-    if (!editWillReassignPackage || !editForm.studentId) return undefined;
-    return calcNextPackageNo(sessions as any[], editForm.folder, editForm.studentId);
-  }, [editWillReassignPackage, sessions, editForm.folder, editForm.studentId]);
+  // ✅ 编辑弹窗里的实时预览：按当前表单里的类型/学生/日期，算出会落在第几包第几条。
+  // Package 编号从不存储，所以这里不需要区分"有没有变"——改日期也会影响排位，
+  // 每次都现算就行。
+  const editPackagePreview = useMemo(() => {
+    if (!editingSessionId) return undefined;
+    return previewPackagePosition(
+      sessions as any[],
+      editForm.folder,
+      editForm.studentId,
+      editForm.date,
+      editingSessionId
+    );
+  }, [sessions, editForm.folder, editForm.studentId, editForm.date, editingSessionId]);
 
   const saveEdit = async () => {
     if (!editingSessionId) return;
@@ -241,20 +205,13 @@ const History: React.FC = () => {
       return;
     }
 
-    const updates: Partial<Omit<ClassSession, 'id'>> = {
+    await updateClassSession(editingSessionId, {
       studentId: editForm.studentId,
       date: editForm.date,
       duration: dur,
       note: editForm.note?.trim() || '',
       folder: editForm.folder || '1',
-    };
-
-    // ✅ 重新进入课包时才重新分配 packageNo；没变的课包记录保持原位不动。
-    if (editWillReassignPackage) {
-      updates.packageNo = calcNextPackageNo(sessions as any[], editForm.folder, editForm.studentId);
-    }
-
-    await updateClassSession(editingSessionId, updates);
+    });
 
     closeEdit();
   };
@@ -368,8 +325,7 @@ const History: React.FC = () => {
         ) : (
           filteredSessions.map((session: any) => {
             const showPkg = isPackageFolder(selectedFolder);
-            const pkgNo = showPkg ? getPkgNo(session) : undefined;
-            const ord = showPkg ? (ordinalMap.get(String(session.id)) ?? undefined) : undefined;
+            const pos = showPkg ? packagePositions.get(String(session.id)) : undefined;
 
             return (
               <div
@@ -391,9 +347,9 @@ const History: React.FC = () => {
                       </h3>
 
                       {/* ✅ Package X · #Y（仅 folder=2/3） */}
-                      {showPkg && pkgNo && ord && (
+                      {showPkg && pos && (
                         <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
-                          Package {pkgNo} · #{ord}
+                          Package {pos.packageNo} · #{pos.ordinal}
                         </span>
                       )}
 
@@ -465,13 +421,14 @@ const History: React.FC = () => {
               ))}
             </Select>
 
-            {editWillReassignPackage && editPreviewPackageNo && (
+            {editPackagePreview ? (
               <p className="mt-1 mb-3 text-xs text-gray-500">
-                将重新归入：<span className="font-semibold">Package {editPreviewPackageNo}</span>
-                <span className="ml-1 text-gray-400">（每满 10 次自动进入下一包）</span>
+                按当前日期归入：<span className="font-semibold">Package {editPackagePreview.packageNo} · #{editPackagePreview.ordinal}</span>
+                <span className="ml-1 text-gray-400">（按上课日期排序，每 10 条一包）</span>
               </p>
+            ) : (
+              <div className="mb-3" />
             )}
-            {!editWillReassignPackage && <div className="mb-3" />}
 
             <div className="mb-1 flex items-end justify-between">
               <label className="block text-sm font-medium text-gray-700">Date</label>

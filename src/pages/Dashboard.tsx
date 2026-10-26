@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import Select from '../components/Select';
-import { isPackageFolder, calcNextPackageNo } from '../lib/package';
+import { isPackageFolder, previewPackagePosition } from '../lib/package';
 
 // ✅ folder 显示名（只影响 UI，不影响数据）
 const FOLDER_LABELS: Record<string, string> = {
@@ -45,21 +45,17 @@ const Dashboard: React.FC = () => {
 
   const classDateLabel = useMemo(() => weekdayLabel(classDate, 'en-US'), [classDate]);
 
-  // ✅ 实时预览：如果当前选择是学习/课包记录，则显示系统即将使用的 Package #
-  const previewPackageNo = useMemo(() => {
+  // ✅ 实时预览：如果当前选择是学习/课包记录，按日期算出会落在第几包第几条
+  const packagePreview = useMemo(() => {
     if (!selectedStudentId) return undefined;
-    return calcNextPackageNo(sessions as any[], folder, selectedStudentId);
-  }, [sessions, folder, selectedStudentId]);
+    return previewPackagePosition(sessions as any[], folder, selectedStudentId, classDate);
+  }, [sessions, folder, selectedStudentId, classDate]);
 
   const handleQuickLog = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedStudentId) return;
 
-    // ✅ 自动决定 packageNo（仅 folder=2/3）
-    const packageNo = calcNextPackageNo(sessions as any[], folder, selectedStudentId);
-
-    // ✅ CHANGED signature: addClassSession(folder, studentId, date, duration, note, packageNo?)
-    await addClassSession(folder, selectedStudentId, classDate, duration, note, packageNo);
+    await addClassSession(folder, selectedStudentId, classDate, duration, note);
 
     setSelectedStudentId('');
     setDuration(1);
@@ -114,12 +110,12 @@ const Dashboard: React.FC = () => {
                 ))}
               </Select>
 
-              {/* ✅ 仅 folder=2/3 时显示预览 */}
-              {selectedStudentId && isPackageFolder(folder) && previewPackageNo && (
+              {/* ✅ 仅 folder=2/3 时显示预览：按日期算出的 Package + 包内第几条 */}
+              {selectedStudentId && isPackageFolder(folder) && packagePreview && (
                 <p className="mt-1 text-xs text-gray-500">
-                  将记录到：<span className="font-semibold">Package {previewPackageNo}</span>
+                  将记录到：<span className="font-semibold">Package {packagePreview.packageNo} · #{packagePreview.ordinal}</span>
                   <span className="ml-1 text-gray-400">
-                    （每满 10 次自动进入下一包）
+                    （按上课日期排序，每 10 条一包）
                   </span>
                 </p>
               )}

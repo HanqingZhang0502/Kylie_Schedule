@@ -14,8 +14,8 @@ export interface ClassSession {
   duration: number;
   note?: string;
 
-  folder?: string;      // 1=授课记录 2=学习记录 3=课包记录
-  packageNo?: number;   // ✅ NEW: 课包期数（1,2,3...）仅用于 folder=2/3
+  folder?: string;      // 1=授课记录 2=学习记录 3=课包记录 4=在外私课
+  // 课包第几包、包内第几条，不再存字段，统一由 src/lib/package.ts 按日期现算。
 
   createdAt?: Timestamp;
   updatedAt?: Timestamp;
