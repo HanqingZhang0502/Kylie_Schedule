@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import Select from '../components/Select';
+import { isPackageFolder, calcNextPackageNo } from '../lib/package';
 
 // ✅ folder 显示名（只影响 UI，不影响数据）
 const FOLDER_LABELS: Record<string, string> = {
@@ -28,37 +29,6 @@ const weekdayLabel = (ymd: string, locale = 'en-US') => {
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'long' }).format(dt);
   const pretty = new Intl.DateTimeFormat(locale, { year: 'numeric', month: 'short', day: 'numeric' }).format(dt);
   return `${weekday}, ${pretty}`;
-};
-
-// ✅ 只对 folder=2/3 使用课包逻辑
-const isPackageFolder = (folder: string) => folder === '2' || folder === '3';
-
-// ✅ 计算“下一条记录应该写入的 packageNo”
-// 规则：同一 studentId + folder 下，找到最大 packageNo；如果该 package 已有 >=10 条记录，则 +1
-const calcNextPackageNo = (allSessions: any[], folder: string, studentId: string) => {
-  // 只在 folder=2/3 才算
-  if (!isPackageFolder(folder)) return undefined;
-
-  const related = allSessions.filter(
-    (s) => (s.folder ?? '1') === folder && s.studentId === studentId
-  );
-
-  if (related.length === 0) return 1;
-
-  // 旧数据没 packageNo 的，按 1 处理（兜底）
-  let maxPkg = 1;
-  for (const s of related) {
-    const pn = typeof s.packageNo === 'number' ? s.packageNo : 1;
-    if (pn > maxPkg) maxPkg = pn;
-  }
-
-  const countInMax = related.filter((s) => (typeof s.packageNo === 'number' ? s.packageNo : 1) === maxPkg).length;
-
-  // 满 10 次，下一条进入新课包
-  if (countInMax >= 10) return maxPkg + 1;
-
-  // 未满 10 次，继续当前课包
-  return maxPkg;
 };
 
 const Dashboard: React.FC = () => {

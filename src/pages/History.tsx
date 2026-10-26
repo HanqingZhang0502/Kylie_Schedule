@@ -2,6 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import { Trash2, Pencil } from 'lucide-react';
 import Select from '../components/Select';
+import { isPackageFolder, getPackageNo as getPkgNo, calcNextPackageNo } from '../lib/package';
+import type { ClassSession } from '../types';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
@@ -24,12 +26,6 @@ const formatWithWeekday = (ymd: string, locale: string = 'en-US') => {
   const weekday = new Intl.DateTimeFormat(locale, { weekday: 'short' }).format(dt); // Mon
   return `${weekday} ${ymd}`;
 };
-
-// ✅ 学习/课包才是“课包模式”
-const isPackageFolder = (folder: string) => folder === '2' || folder === '3';
-
-// ✅ 老数据没写 packageNo 的，兜底算 1
-const getPkgNo = (s: any) => (typeof s.packageNo === 'number' ? s.packageNo : 1);
 
 // ✅ 用于计算序号：日期升序，再用 createdAt 升序兜底，最后用 id
 const sortForOrdinal = (a: any, b: any) => {
@@ -215,6 +211,27 @@ const History: React.FC = () => {
     setEditingSessionId(null);
   };
 
+  // ✅ 编辑的这条记录改之前是什么样（用来判断 folder/学生 有没有变）
+  const editingOriginal = useMemo(
+    () => sessions.find((s: any) => s.id === editingSessionId) as any,
+    [sessions, editingSessionId]
+  );
+
+  // ✅ 只有在"进入课包模式"的那一刻才需要重新算 packageNo：
+  // 目标 folder 是课包类型，并且 folder 或学生跟原来不一样（相当于重新排队）。
+  // 如果只是改日期/时长/备注，课包位置不动。
+  const editWillReassignPackage = useMemo(() => {
+    if (!editingOriginal || !isPackageFolder(editForm.folder)) return false;
+    const folderChanged = (editingOriginal.folder ?? '1') !== editForm.folder;
+    const studentChanged = editingOriginal.studentId !== editForm.studentId;
+    return folderChanged || studentChanged;
+  }, [editingOriginal, editForm.folder, editForm.studentId]);
+
+  const editPreviewPackageNo = useMemo(() => {
+    if (!editWillReassignPackage || !editForm.studentId) return undefined;
+    return calcNextPackageNo(sessions as any[], editForm.folder, editForm.studentId);
+  }, [editWillReassignPackage, sessions, editForm.folder, editForm.studentId]);
+
   const saveEdit = async () => {
     if (!editingSessionId) return;
 
@@ -224,13 +241,20 @@ const History: React.FC = () => {
       return;
     }
 
-    await updateClassSession(editingSessionId, {
+    const updates: Partial<Omit<ClassSession, 'id'>> = {
       studentId: editForm.studentId,
       date: editForm.date,
       duration: dur,
       note: editForm.note?.trim() || '',
       folder: editForm.folder || '1',
-    });
+    };
+
+    // ✅ 重新进入课包时才重新分配 packageNo；没变的课包记录保持原位不动。
+    if (editWillReassignPackage) {
+      updates.packageNo = calcNextPackageNo(sessions as any[], editForm.folder, editForm.studentId);
+    }
+
+    await updateClassSession(editingSessionId, updates);
 
     closeEdit();
   };
@@ -418,16 +442,36 @@ const History: React.FC = () => {
           <div className="relative w-full max-w-md bg-white rounded-2xl shadow-xl p-5">
             <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
 
+            <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
+            <Select
+              value={editForm.folder}
+              onChange={(e) => setEditForm(f => ({ ...f, folder: e.target.value }))}
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+            >
+              <option value="1">{FOLDER_LABELS["1"]}</option>
+              <option value="2">{FOLDER_LABELS["2"]}</option>
+              <option value="3">{FOLDER_LABELS["3"]}</option>
+              <option value="4">{FOLDER_LABELS["4"]}</option>
+            </Select>
+
             <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
             <Select
               value={editForm.studentId}
               onChange={(e) => setEditForm(f => ({ ...f, studentId: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
             >
               {students.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </Select>
+
+            {editWillReassignPackage && editPreviewPackageNo && (
+              <p className="mt-1 mb-3 text-xs text-gray-500">
+                将重新归入：<span className="font-semibold">Package {editPreviewPackageNo}</span>
+                <span className="ml-1 text-gray-400">（每满 10 次自动进入下一包）</span>
+              </p>
+            )}
+            {!editWillReassignPackage && <div className="mb-3" />}
 
             <div className="mb-1 flex items-end justify-between">
               <label className="block text-sm font-medium text-gray-700">Date</label>
