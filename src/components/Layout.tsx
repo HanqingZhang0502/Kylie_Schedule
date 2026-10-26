@@ -12,9 +12,9 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
   const { logout, currentUser } = useAuth();
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col font-sans text-gray-900">
+    <div className="min-h-screen bg-paper flex flex-col text-ink">
       {/* Header */}
-      <header className="bg-rose-600 text-white p-4 shadow-md sticky top-0 z-10">
+      <header className="bg-accent text-paper p-4 shadow-sketch sticky top-0 z-10">
         <div className="flex items-center justify-between">
           {/* 左侧 logo，同时平衡右侧 Logout 的视觉宽度 */}
           <div className="w-16 flex items-center">
@@ -25,7 +25,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
             />
           </div>
 
-          <h1 className="text-xl font-bold text-center flex-1">
+          <h1 className="font-marker text-3xl font-bold text-center flex-1">
             💃 Kylie Schedule
           </h1>
 
@@ -33,7 +33,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
           <div className="w-16 flex justify-end">
             <button
               onClick={logout}
-              className="text-sm text-white/90 hover:text-white underline"
+              className="font-hand text-sm text-paper/90 hover:text-paper underline decoration-dashed underline-offset-2"
             >
               Logout
             </button>
@@ -42,7 +42,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
         {/* 当前登录账号（调试用，确认 Vercel 登录的是谁） */}
         {currentUser?.email && (
-          <div className="text-center text-[10px] text-white/50 mt-1 tracking-wide">
+          <div className="text-center text-[10px] text-paper/50 mt-1 tracking-wide">
             {currentUser.email}
           </div>
         )}
@@ -56,19 +56,19 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       {/* ✅ Signature（新增：放在底部导航上方，不挡操作） */}
       <div className="fixed bottom-[72px] left-0 right-0 z-10 pointer-events-none">
         <div className="text-center">
-          <span className="font-serif italic tracking-wide text-xs text-gray-600/80">
+          <span className="font-hand tracking-wide text-xs text-ink-muted/80">
             By Hanqing Zhang
           </span>
         </div>
       </div>
 
       {/* Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg pb-safe z-20">
+      <nav className="fixed bottom-0 left-0 right-0 bg-scrap border-t border-line shadow-sketch pb-safe z-20">
         <div className="flex justify-around items-center h-16">
           <button
             onClick={() => onTabChange('dashboard')}
-            className={`flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'dashboard' ? 'text-rose-600' : 'text-gray-400'
+            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
+              activeTab === 'dashboard' ? 'text-accent' : 'text-ink-muted'
             }`}
           >
             <Calendar size={24} />
@@ -77,8 +77,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
           <button
             onClick={() => onTabChange('students')}
-            className={`flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'students' ? 'text-rose-600' : 'text-gray-400'
+            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
+              activeTab === 'students' ? 'text-accent' : 'text-ink-muted'
             }`}
           >
             <Users size={24} />
@@ -87,8 +87,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
 
           <button
             onClick={() => onTabChange('history')}
-            className={`flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'history' ? 'text-rose-600' : 'text-gray-400'
+            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
+              activeTab === 'history' ? 'text-accent' : 'text-ink-muted'
             }`}
           >
             <BarChart3 size={24} />

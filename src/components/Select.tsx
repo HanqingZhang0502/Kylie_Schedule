@@ -15,7 +15,7 @@ const Select: React.FC<SelectProps> = ({ className = '', children, ...props }) =
     </select>
     <ChevronDown
       size={18}
-      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"
+      className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-ink-muted"
     />
   </div>
 );

@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useStudentData } from '../context/StudentContext';
 import Select from '../components/Select';
 import { isPackageFolder, previewPackagePosition } from '../lib/package';
+import { sketchInput, sketchCard, sketchBtnPrimary } from '../lib/sketchStyles';
 
 // ✅ folder 显示名（只影响 UI，不影响数据）
 const FOLDER_LABELS: Record<string, string> = {
@@ -64,11 +65,11 @@ const Dashboard: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-b from-rose-50 via-white to-rose-50">
+    <div className="min-h-screen w-full bg-paper">
       <div className="max-w-2xl mx-auto px-4 py-10 space-y-8">
 
-        <section className="bg-white/80 backdrop-blur-md rounded-3xl shadow-xl p-6 border border-white/60">
-          <h2 className="text-lg font-semibold text-rose-600 mb-4">
+        <section className={`${sketchCard} p-6`}>
+          <h2 className="font-marker text-2xl font-bold text-accent mb-4">
             💃 Quick Log Class
           </h2>
 
@@ -76,13 +77,13 @@ const Dashboard: React.FC = () => {
 
             {/* Folder */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="font-hand block text-sm text-ink mb-1">
                 记录类型
               </label>
               <Select
                 value={folder}
                 onChange={(e) => setFolder(e.target.value)}
-                className="w-full p-3 bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className={`w-full ${sketchInput}`}
               >
                 <option value="1">{FOLDER_LABELS["1"]}</option>
                 <option value="2">{FOLDER_LABELS["2"]}</option>
@@ -93,13 +94,13 @@ const Dashboard: React.FC = () => {
 
             {/* Student */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="font-hand block text-sm text-ink mb-1">
                 Student
               </label>
               <Select
                 value={selectedStudentId}
                 onChange={(e) => setSelectedStudentId(e.target.value)}
-                className="w-full p-3 bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className={`w-full ${sketchInput}`}
                 required
               >
                 <option value="">Select a student...</option>
@@ -112,9 +113,9 @@ const Dashboard: React.FC = () => {
 
               {/* ✅ 仅 folder=2/3 时显示预览：按日期算出的 Package + 包内第几条 */}
               {selectedStudentId && isPackageFolder(folder) && packagePreview && (
-                <p className="mt-1 text-xs text-gray-500">
-                  将记录到：<span className="font-semibold">Package {packagePreview.packageNo} · #{packagePreview.ordinal}</span>
-                  <span className="ml-1 text-gray-400">
+                <p className="font-hand mt-1 text-xs text-ink-muted">
+                  将记录到：<span className="font-bold text-accent">Package {packagePreview.packageNo} · #{packagePreview.ordinal}</span>
+                  <span className="ml-1 text-ink-muted/70">
                     （按上课日期排序，每 10 条一包）
                   </span>
                 </p>
@@ -123,17 +124,17 @@ const Dashboard: React.FC = () => {
 
             {/* Date */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="font-hand block text-sm text-ink mb-1">
                 Class Date
               </label>
               <input
                 type="date"
                 value={classDate}
                 onChange={(e) => setClassDate(e.target.value)}
-                className="block w-px min-w-full max-w-full box-border overflow-hidden p-3 text-sm bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className={`block w-px min-w-full max-w-full box-border overflow-hidden ${sketchInput}`}
               />
               {classDateLabel && (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="font-hand mt-1 text-xs text-ink-muted">
                   {classDateLabel}
                 </p>
               )}
@@ -141,7 +142,7 @@ const Dashboard: React.FC = () => {
 
             {/* Duration */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="font-hand block text-sm text-ink mb-1">
                 Duration (hrs)
               </label>
               <input
@@ -149,13 +150,13 @@ const Dashboard: React.FC = () => {
                 step="0.5"
                 value={duration}
                 onChange={(e) => setDuration(Number(e.target.value))}
-                className="w-full p-3 bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className={`w-full ${sketchInput}`}
               />
             </div>
 
             {/* Note */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="font-hand block text-sm text-ink mb-1">
                 Note (Optional)
               </label>
               <input
@@ -163,21 +164,21 @@ const Dashboard: React.FC = () => {
                 value={note}
                 onChange={(e) => setNote(e.target.value)}
                 placeholder="e.g. Rumba Basics"
-                className="w-full p-3 bg-white/90 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                className={`w-full ${sketchInput}`}
               />
             </div>
 
             <button
               type="submit"
               disabled={!selectedStudentId}
-              className="w-full bg-rose-600 text-white py-3 rounded-xl font-semibold shadow-lg shadow-rose-300 active:scale-95 transition-all disabled:opacity-50"
+              className={`${sketchBtnPrimary} w-full py-3`}
             >
               Log Class
             </button>
           </form>
         </section>
 
-        <section className="bg-white/60 backdrop-blur-md rounded-3xl shadow-lg p-6 border border-white/60 text-center text-gray-600">
+        <section className={`${sketchCard} p-6 text-center font-hand text-ink-muted`}>
           No recent activity yet.
         </section>
 

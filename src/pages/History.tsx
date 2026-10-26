@@ -3,6 +3,7 @@ import { useStudentData } from '../context/StudentContext';
 import { Trash2, Pencil } from 'lucide-react';
 import Select from '../components/Select';
 import { isPackageFolder, computePackagePositions, previewPackagePosition } from '../lib/package';
+import { sketchInput, sketchCard, sketchBtnPrimary, sketchBtnSecondary } from '../lib/sketchStyles';
 
 const monthKey = (dateStr: string) => dateStr.slice(0, 7); // YYYY-MM
 
@@ -223,15 +224,15 @@ const History: React.FC = () => {
   return (
     <div className="space-y-4">
       {/* 筛选器 + 批量操作 */}
-      <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 space-y-3">
+      <div className={`${sketchCard} p-4 space-y-3`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           {/* Folder */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
+            <label className="font-hand block text-sm text-ink mb-1">记录类型</label>
             <Select
               value={selectedFolder}
               onChange={(e) => setSelectedFolder(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              className={`w-full ${sketchInput}`}
             >
               <option value="1">{FOLDER_LABELS["1"]}</option>
               <option value="2">{FOLDER_LABELS["2"]}</option>
@@ -242,11 +243,11 @@ const History: React.FC = () => {
 
           {/* Student */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+            <label className="font-hand block text-sm text-ink mb-1">Student</label>
             <Select
               value={selectedStudentId}
               onChange={(e) => setSelectedStudentId(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              className={`w-full ${sketchInput}`}
             >
               <option value="ALL">All Students</option>
               {students.map(s => (
@@ -257,11 +258,11 @@ const History: React.FC = () => {
 
           {/* Month */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Month</label>
+            <label className="font-hand block text-sm text-ink mb-1">Month</label>
             <Select
               value={selectedMonth}
               onChange={(e) => setSelectedMonth(e.target.value)}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              className={`w-full ${sketchInput}`}
               disabled={availableMonths.length === 0}
             >
               {availableMonths.length === 0 ? (
@@ -279,15 +280,15 @@ const History: React.FC = () => {
 
         {/* Bulk action bar */}
         <div className="flex items-center justify-between pt-2">
-          <div className="text-sm text-gray-500">
-            Selected: <span className="font-semibold">{selectedIds.size}</span>
+          <div className="font-hand text-sm text-ink-muted">
+            Selected: <span className="font-bold text-ink">{selectedIds.size}</span>
           </div>
           <div className="flex gap-2">
             <button
               type="button"
               onClick={toggleSelectAll}
               disabled={filteredSessions.length === 0}
-              className="px-3 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              className={`${sketchBtnSecondary} px-3 py-2 disabled:opacity-50`}
             >
               {allSelected ? 'Clear' : 'Select All'}
             </button>
@@ -296,7 +297,7 @@ const History: React.FC = () => {
               type="button"
               onClick={bulkDelete}
               disabled={selectedIds.size === 0}
-              className="px-3 py-2 rounded-xl bg-red-600 text-white hover:bg-red-700 disabled:opacity-50"
+              className={`${sketchBtnPrimary} px-3 py-2`}
             >
               Delete Selected
             </button>
@@ -305,21 +306,21 @@ const History: React.FC = () => {
       </div>
 
       {/* 总课时 */}
-      <div className="bg-rose-600 text-white p-4 rounded-xl shadow-lg shadow-rose-200">
-        <p className="text-rose-100 text-sm">
+      <div className="bg-accent text-paper p-4 rounded-sketch shadow-sketch">
+        <p className="font-hand text-paper/80 text-sm">
           Total Hours · {selectedMonth === ALL_TIME_VALUE ? 'All Time' : (selectedMonth || '—')} · {FOLDER_LABELS[selectedFolder]}
           {selectedStudentId === 'ALL' ? '' : ` · ${getStudentName(selectedStudentId)}`}
         </p>
         <p className="text-3xl font-bold">{totalHours} hrs</p>
       </div>
 
-      <h2 className="text-lg font-bold text-gray-800 mb-2">
+      <h2 className="font-marker text-2xl font-bold text-ink mb-2">
         Class History · {FOLDER_LABELS[selectedFolder]}
       </h2>
 
       <div className="space-y-3">
         {filteredSessions.length === 0 ? (
-          <div className="text-center py-10 text-gray-400">
+          <div className="font-hand text-center py-10 text-ink-muted">
             No classes for this selection.
           </div>
         ) : (
@@ -330,38 +331,38 @@ const History: React.FC = () => {
             return (
               <div
                 key={session.id}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 flex justify-between items-start"
+                className={`${sketchCard} p-4 flex justify-between items-start`}
               >
                 <div className="flex items-start gap-3">
                   <input
                     type="checkbox"
                     checked={selectedIds.has(session.id)}
                     onChange={() => toggleOne(session.id)}
-                    className="mt-1 h-4 w-4"
+                    className="mt-1 h-4 w-4 accent-accent"
                   />
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-semibold text-gray-800">
+                      <h3 className="font-hand text-lg text-ink">
                         {getStudentName(session.studentId)}
                       </h3>
 
                       {/* ✅ Package X · #Y（仅 folder=2/3） */}
                       {showPkg && pos && (
-                        <span className="text-xs bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-highlight text-ink px-2 py-0.5 rounded-sketch-sm border border-line">
                           Package {pos.packageNo} · #{pos.ordinal}
                         </span>
                       )}
 
-                      <span className="text-xs bg-rose-100 text-rose-700 px-2 py-0.5 rounded-full">
+                      <span className="text-xs bg-annotation/10 text-annotation px-2 py-0.5 rounded-sketch-sm">
                         {session.duration}h
                       </span>
                     </div>
 
-                    <p className="text-sm text-gray-500">{formatWithWeekday(session.date, 'en-US')}</p>
+                    <p className="font-hand text-sm text-ink-muted">{formatWithWeekday(session.date, 'en-US')}</p>
 
                     {session.note && (
-                      <p className="text-sm text-gray-400 mt-1 italic">"{session.note}"</p>
+                      <p className="font-hand text-sm text-ink-muted/80 mt-1 italic">"{session.note}"</p>
                     )}
                   </div>
                 </div>
@@ -369,7 +370,7 @@ const History: React.FC = () => {
                 <div className="flex items-center gap-1">
                   <button
                     onClick={() => openEdit(session)}
-                    className="text-gray-300 hover:text-gray-700 p-2"
+                    className="text-line hover:text-annotation p-2"
                     title="Edit"
                   >
                     <Pencil size={16} />
@@ -379,7 +380,7 @@ const History: React.FC = () => {
                     onClick={() => {
                       if (confirm('Delete this record?')) deleteClassSession(session.id);
                     }}
-                    className="text-gray-300 hover:text-red-500 p-2"
+                    className="text-line hover:text-accent p-2"
                     title="Delete"
                   >
                     <Trash2 size={16} />
@@ -394,15 +395,15 @@ const History: React.FC = () => {
       {/* Edit Modal */}
       {isEditOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
-          <div className="absolute inset-0 bg-black/40" onClick={closeEdit} />
-          <div className="relative w-full min-w-0 max-w-md bg-white rounded-2xl shadow-xl p-5">
-            <h3 className="text-lg font-bold text-gray-800 mb-4">Edit Class</h3>
+          <div className="absolute inset-0 bg-ink/40" onClick={closeEdit} />
+          <div className={`relative w-full min-w-0 max-w-md ${sketchCard} p-5`}>
+            <h3 className="font-marker text-2xl font-bold text-ink mb-4">Edit Class</h3>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">记录类型</label>
+            <label className="font-hand block text-sm text-ink mb-1">记录类型</label>
             <Select
               value={editForm.folder}
               onChange={(e) => setEditForm(f => ({ ...f, folder: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className={`w-full mb-3 ${sketchInput}`}
             >
               <option value="1">{FOLDER_LABELS["1"]}</option>
               <option value="2">{FOLDER_LABELS["2"]}</option>
@@ -410,11 +411,11 @@ const History: React.FC = () => {
               <option value="4">{FOLDER_LABELS["4"]}</option>
             </Select>
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Student</label>
+            <label className="font-hand block text-sm text-ink mb-1">Student</label>
             <Select
               value={editForm.studentId}
               onChange={(e) => setEditForm(f => ({ ...f, studentId: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+              className={`w-full ${sketchInput}`}
             >
               {students.map(s => (
                 <option key={s.id} value={s.id}>{s.name}</option>
@@ -422,54 +423,54 @@ const History: React.FC = () => {
             </Select>
 
             {editPackagePreview ? (
-              <p className="mt-1 mb-3 text-xs text-gray-500">
-                按当前日期归入：<span className="font-semibold">Package {editPackagePreview.packageNo} · #{editPackagePreview.ordinal}</span>
-                <span className="ml-1 text-gray-400">（按上课日期排序，每 10 条一包）</span>
+              <p className="font-hand mt-1 mb-3 text-xs text-ink-muted">
+                按当前日期归入：<span className="font-bold text-accent">Package {editPackagePreview.packageNo} · #{editPackagePreview.ordinal}</span>
+                <span className="ml-1 text-ink-muted/70">（按上课日期排序，每 10 条一包）</span>
               </p>
             ) : (
               <div className="mb-3" />
             )}
 
             <div className="mb-1 flex items-end justify-between">
-              <label className="block text-sm font-medium text-gray-700">Date</label>
-              {editDateLabel && <span className="text-xs text-gray-400">{editDateLabel}</span>}
+              <label className="font-hand block text-sm text-ink">Date</label>
+              {editDateLabel && <span className="font-hand text-xs text-ink-muted">{editDateLabel}</span>}
             </div>
             <input
               type="date"
               value={editForm.date}
               onChange={(e) => setEditForm(f => ({ ...f, date: e.target.value }))}
-              className="block w-px min-w-full max-w-full box-border overflow-hidden p-3 text-sm bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className={`block w-px min-w-full max-w-full box-border overflow-hidden mb-3 ${sketchInput}`}
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Duration (hours)</label>
+            <label className="font-hand block text-sm text-ink mb-1">Duration (hours)</label>
             <input
               type="number"
               min="0"
               step="0.5"
               value={editForm.duration}
               onChange={(e) => setEditForm(f => ({ ...f, duration: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-3"
+              className={`w-full mb-3 ${sketchInput}`}
             />
 
-            <label className="block text-sm font-medium text-gray-700 mb-1">Note</label>
+            <label className="font-hand block text-sm text-ink mb-1">Note</label>
             <input
               type="text"
               value={editForm.note}
               onChange={(e) => setEditForm(f => ({ ...f, note: e.target.value }))}
-              className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none mb-5"
+              className={`w-full mb-5 ${sketchInput}`}
               placeholder="Optional"
             />
 
             <div className="flex gap-2 justify-end">
               <button
                 onClick={closeEdit}
-                className="px-4 py-2 rounded-xl border border-gray-200 text-gray-700 hover:bg-gray-50"
+                className={`${sketchBtnSecondary} px-4 py-2`}
               >
                 Cancel
               </button>
               <button
                 onClick={saveEdit}
-                className="px-4 py-2 rounded-xl bg-rose-600 text-white hover:bg-rose-700"
+                className={`${sketchBtnPrimary} px-4 py-2`}
               >
                 Save
               </button>
