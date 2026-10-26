@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { createUserWithEmailAndPassword, signInWithEmailAndPassword } from 'firebase/auth';
 import { auth } from '../firebase';
+import { sketchInput, sketchCard, sketchBtnPrimary } from '../lib/sketchStyles';
 
 const Login: React.FC = () => {
     const [isLogin, setIsLogin] = useState(true);
@@ -29,44 +30,44 @@ const Login: React.FC = () => {
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-rose-50 p-4">
-            <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border border-rose-100">
+        <div className="min-h-screen flex items-center justify-center bg-paper p-4">
+            <div className={`${sketchCard} p-8 w-full max-w-md`}>
                 <img
                     src="/logo-k.png"
                     alt="Kylie Schedule"
                     className="h-14 w-14 object-contain mx-auto mb-4"
                 />
-                <h1 className="text-2xl font-bold text-center text-rose-600 mb-2">
+                <h1 className="font-marker text-4xl font-bold text-center text-accent mb-2">
                     {isLogin ? 'Welcome Back! 💃' : 'Join Kylie Schedule'}
                 </h1>
-                <p className="text-center text-gray-500 mb-6">
+                <p className="font-hand text-center text-ink-muted mb-6">
                     {isLogin ? 'Sign in to access your schedule' : 'Create an account to start tracking'}
                 </p>
 
                 {error && (
-                    <div className="bg-red-50 text-red-600 p-3 rounded-lg text-sm mb-4">
+                    <div className="bg-highlight text-accent border border-line rounded-sketch p-3 text-sm mb-4 font-hand">
                         {error}
                     </div>
                 )}
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <label className="font-hand block text-sm text-ink mb-1">Email</label>
                         <input
                             type="email"
                             value={email}
                             onChange={(e) => setEmail(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                            className={`w-full ${sketchInput}`}
                             required
                         />
                     </div>
                     <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                        <label className="font-hand block text-sm text-ink mb-1">Password</label>
                         <input
                             type="password"
                             value={password}
                             onChange={(e) => setPassword(e.target.value)}
-                            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-rose-500 outline-none"
+                            className={`w-full ${sketchInput}`}
                             required
                             minLength={6}
                         />
@@ -75,7 +76,7 @@ const Login: React.FC = () => {
                     <button
                         type="submit"
                         disabled={loading}
-                        className="w-full bg-rose-600 text-white py-3 rounded-xl font-semibold shadow-lg shadow-rose-200 active:scale-95 transition-all disabled:opacity-50"
+                        className={`${sketchBtnPrimary} w-full py-3`}
                     >
                         {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Create Account')}
                     </button>
@@ -84,7 +85,7 @@ const Login: React.FC = () => {
                 <div className="mt-6 text-center">
                     <button
                         onClick={() => setIsLogin(!isLogin)}
-                        className="text-sm text-rose-600 hover:underline"
+                        className="font-hand text-sm text-annotation hover:underline decoration-dashed underline-offset-2"
                     >
                         {isLogin ? "Don't have an account? Sign Up" : "Already have an account? Sign In"}
                     </button>

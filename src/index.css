@@ -1,3 +1,17 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* 遵守"减少动态效果"系统设置：去掉倾斜/位移动画，只保留颜色/阴影反馈 */
+@media (prefers-reduced-motion: reduce) {
+  .sketch-btn-primary,
+  .sketch-btn-secondary {
+    transition: none !important;
+  }
+  .sketch-btn-primary:hover,
+  .sketch-btn-primary:active,
+  .sketch-btn-secondary:hover,
+  .sketch-btn-secondary:active {
+    transform: none !important;
+  }
+}
