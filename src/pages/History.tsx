@@ -347,10 +347,13 @@ const History: React.FC = () => {
                         {getStudentName(session.studentId)}
                       </h3>
 
-                      {/* ✅ Package X · #Y（仅 folder=2/3） */}
+                      {/* ✅ Package X + 包内第几条（仅 folder=2/3）：序号用手绘方框圈起来 */}
                       {showPkg && pos && (
-                        <span className="text-xs bg-highlight text-ink px-2 py-0.5 rounded-sketch-sm border border-line">
-                          Package {pos.packageNo} · #{pos.ordinal}
+                        <span className="inline-flex items-center gap-1.5 text-xs bg-highlight text-ink pl-2 pr-1.5 py-0.5 rounded-sketch-sm border border-line">
+                          <span>Package {pos.packageNo}</span>
+                          <span className="inline-flex items-center justify-center min-w-[1.25rem] h-5 px-1 rounded-sketch-sm border-2 border-accent text-accent font-bold -rotate-2">
+                            {pos.ordinal}
+                          </span>
                         </span>
                       )}
 
