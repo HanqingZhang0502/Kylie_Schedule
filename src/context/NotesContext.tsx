@@ -16,11 +16,18 @@ const makeBlockId = () =>
     ? crypto.randomUUID()
     : `${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
+// 高亮颜色按"这一行的文字内容"记，不按行号——这样她在前面插入/删除行，
+// 已经标过色的行不会跟着错位（代价是：如果改了某一行的文字，那一行的颜色会跟着丢，
+// 需要重新标一下，这个取舍对"随手记"这种常改的场景来说是合理的）。
+export type LineColors = Record<string, ScheduleColor>;
+
 interface NotesContextType {
   // 随手记
   quickNote: string;
   quickNoteLoaded: boolean;
   saveQuickNote: (content: string) => Promise<void>;
+  quickNoteLineColors: LineColors;
+  setLineColor: (lineText: string, color: ScheduleColor | null) => Promise<void>;
 
   // 周常课表
   weeklySchedule: WeeklySchedule;
@@ -35,6 +42,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [user, setUser] = useState<User | null>(() => auth.currentUser);
   const [quickNote, setQuickNote] = useState('');
   const [quickNoteLoaded, setQuickNoteLoaded] = useState(false);
+  const [quickNoteLineColors, setQuickNoteLineColors] = useState<LineColors>({});
   const [weeklySchedule, setWeeklySchedule] = useState<WeeklySchedule>(emptySchedule());
 
   useEffect(() => {
@@ -43,6 +51,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (!user) {
       setQuickNote('');
       setQuickNoteLoaded(false);
+      setQuickNoteLineColors({});
       setWeeklySchedule(emptySchedule());
       return () => unsubAuth();
     }
@@ -50,6 +59,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     const noteRef = doc(db, 'users', user.uid, 'misc', 'quickNote');
     const unsubNote = onSnapshot(noteRef, (snap) => {
       setQuickNote((snap.data()?.content as string) ?? '');
+      setQuickNoteLineColors((snap.data()?.lineColors as LineColors) ?? {});
       setQuickNoteLoaded(true);
     });
 
@@ -71,6 +81,21 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     await setDoc(
       doc(db, 'users', user.uid, 'misc', 'quickNote'),
       { content, updatedAt: serverTimestamp() },
+      { merge: true }
+    );
+  };
+
+  const setLineColor = async (lineText: string, color: ScheduleColor | null) => {
+    if (!user) return;
+    const next: LineColors = { ...quickNoteLineColors };
+    if (color) {
+      next[lineText] = color;
+    } else {
+      delete next[lineText];
+    }
+    await setDoc(
+      doc(db, 'users', user.uid, 'misc', 'quickNote'),
+      { lineColors: next, updatedAt: serverTimestamp() },
       { merge: true }
     );
   };
@@ -118,6 +143,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         quickNote,
         quickNoteLoaded,
         saveQuickNote,
+        quickNoteLineColors,
+        setLineColor,
         weeklySchedule,
         addScheduleBlock,
         updateScheduleBlock,
