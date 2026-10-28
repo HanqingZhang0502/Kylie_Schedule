@@ -31,7 +31,7 @@ export interface AppData {
 export const WEEKDAYS = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'] as const;
 export type WeekDay = typeof WEEKDAYS[number];
 
-export type ScheduleColor = 'rose' | 'violet' | 'sky' | 'amber';
+export type ScheduleColor = 'rose' | 'violet' | 'sky' | 'amber' | 'emerald' | 'indigo' | 'slate';
 
 export interface ScheduleBlock {
   id: string;

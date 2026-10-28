@@ -6,7 +6,7 @@ import type { WeekDay, ScheduleBlock, ScheduleColor } from '../types';
 import { sketchCard, sketchInput, sketchBtnPrimary, sketchBtnSecondary } from '../lib/sketchStyles';
 import { COLOR_BADGE, COLOR_DOT } from '../lib/colorTags';
 
-const COLOR_OPTIONS: ScheduleColor[] = ['rose', 'violet', 'sky', 'amber'];
+const COLOR_OPTIONS: ScheduleColor[] = ['rose', 'violet', 'sky', 'amber', 'emerald', 'indigo', 'slate'];
 
 const sortByStart = (a: ScheduleBlock, b: ScheduleBlock) => a.start.localeCompare(b.start);
 
@@ -156,7 +156,7 @@ const WeeklySchedule: React.FC = () => {
             />
 
             <label className="font-hand block text-sm text-ink mb-1">颜色标签</label>
-            <div className="flex gap-2 mb-5">
+            <div className="flex flex-wrap gap-2 mb-5">
               {COLOR_OPTIONS.map((c) => (
                 <button
                   key={c}

@@ -11,7 +11,7 @@ const QuickNotes: React.FC = () => {
   const { quickNote, quickNoteLoaded, saveQuickNote, quickNoteLineColors, setLineColor } = useNotes();
   const [draft, setDraft] = useState('');
   const [status, setStatus] = useState<'idle' | 'pending' | 'saving' | 'saved'>('idle');
-  const [mode, setMode] = useState<'edit' | 'highlight'>('edit');
+  const [mode, setMode] = useState<'edit' | 'highlight'>('highlight');
   const hasLoadedDraft = useRef(false);
   const saveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -84,9 +84,9 @@ const QuickNotes: React.FC = () => {
             className="w-full min-h-[60vh] resize-none bg-transparent outline-none font-hand text-lg text-ink leading-relaxed"
           />
         </div>
-      ) : (
+      ) : draft.trim() ? (
         <div className={`${sketchCard} p-4 space-y-1`}>
-          <p className="font-hand text-xs text-ink-muted mb-2">点一下某一行，循环切换颜色（粉→紫→蓝→黄→无色）</p>
+          <p className="font-hand text-xs text-ink-muted mb-2">点一下某一行，循环切换颜色（共 7 种，循环到底变回无色）</p>
           {draft.split('\n').map((line, idx) => {
             const color = quickNoteLineColors[line] as ScheduleColor | undefined;
             return (
@@ -101,6 +101,10 @@ const QuickNotes: React.FC = () => {
               </div>
             );
           })}
+        </div>
+      ) : (
+        <div className={`${sketchCard} p-4 text-center font-hand text-ink-muted`}>
+          还没有内容，点右上角"继续写"开始记
         </div>
       )}
     </div>
