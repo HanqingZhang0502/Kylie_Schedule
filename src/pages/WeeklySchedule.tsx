@@ -4,22 +4,9 @@ import { useNotes } from '../context/NotesContext';
 import { WEEKDAYS } from '../types';
 import type { WeekDay, ScheduleBlock, ScheduleColor } from '../types';
 import { sketchCard, sketchInput, sketchBtnPrimary, sketchBtnSecondary } from '../lib/sketchStyles';
+import { COLOR_BADGE, COLOR_DOT } from '../lib/colorTags';
 
 const COLOR_OPTIONS: ScheduleColor[] = ['rose', 'violet', 'sky', 'amber'];
-
-const COLOR_BADGE: Record<ScheduleColor, string> = {
-  rose: 'bg-rose-100 text-rose-700 border-rose-300',
-  violet: 'bg-violet-100 text-violet-700 border-violet-300',
-  sky: 'bg-sky-100 text-sky-700 border-sky-300',
-  amber: 'bg-amber-100 text-amber-700 border-amber-300',
-};
-
-const COLOR_DOT: Record<ScheduleColor, string> = {
-  rose: 'bg-rose-400',
-  violet: 'bg-violet-400',
-  sky: 'bg-sky-400',
-  amber: 'bg-amber-400',
-};
 
 const sortByStart = (a: ScheduleBlock, b: ScheduleBlock) => a.start.localeCompare(b.start);
 
