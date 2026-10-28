@@ -1,12 +1,22 @@
 import React from 'react';
-import { Users, Calendar, BarChart3 } from 'lucide-react';
+import { Users, Calendar, BarChart3, NotebookPen, CalendarDays } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+
+export type Tab = 'dashboard' | 'students' | 'history' | 'notes' | 'schedule';
 
 interface LayoutProps {
   children: React.ReactNode;
-  activeTab: 'dashboard' | 'students' | 'history';
-  onTabChange: (tab: 'dashboard' | 'students' | 'history') => void;
+  activeTab: Tab;
+  onTabChange: (tab: Tab) => void;
 }
+
+const TABS: { key: Tab; label: string; icon: React.ElementType }[] = [
+  { key: 'dashboard', label: 'Dashboard', icon: Calendar },
+  { key: 'students', label: 'Students', icon: Users },
+  { key: 'history', label: 'History', icon: BarChart3 },
+  { key: 'notes', label: 'Notes', icon: NotebookPen },
+  { key: 'schedule', label: 'Weekly', icon: CalendarDays },
+];
 
 const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => {
   const { logout, currentUser } = useAuth();
@@ -65,35 +75,18 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange }) => 
       {/* Bottom Navigation */}
       <nav className="fixed bottom-0 left-0 right-0 bg-scrap border-t border-line shadow-sketch pb-safe z-20">
         <div className="flex justify-around items-center h-16">
-          <button
-            onClick={() => onTabChange('dashboard')}
-            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'dashboard' ? 'text-accent' : 'text-ink-muted'
-            }`}
-          >
-            <Calendar size={24} />
-            <span className="text-xs mt-1">Dashboard</span>
-          </button>
-
-          <button
-            onClick={() => onTabChange('students')}
-            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'students' ? 'text-accent' : 'text-ink-muted'
-            }`}
-          >
-            <Users size={24} />
-            <span className="text-xs mt-1">Students</span>
-          </button>
-
-          <button
-            onClick={() => onTabChange('history')}
-            className={`font-hand flex flex-col items-center justify-center w-full h-full ${
-              activeTab === 'history' ? 'text-accent' : 'text-ink-muted'
-            }`}
-          >
-            <BarChart3 size={24} />
-            <span className="text-xs mt-1">History</span>
-          </button>
+          {TABS.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => onTabChange(key)}
+              className={`font-hand flex flex-col items-center justify-center w-full h-full ${
+                activeTab === key ? 'text-accent' : 'text-ink-muted'
+              }`}
+            >
+              <Icon size={22} />
+              <span className="text-[10px] mt-1">{label}</span>
+            </button>
+          ))}
         </div>
       </nav>
     </div>
